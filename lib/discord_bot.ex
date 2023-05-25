@@ -1,12 +1,12 @@
 defmodule DiscordBot do
   use Application
 
-  # See http://elixir-lang.org/docs/stable/elixir/Application.html
+  # See https://hexdocs.pm/elixir/main/Application.html
   # for more information on OTP Applications
   def start(_type, _args) do
-    children = []
+    children = [DiscordBot.Consumer]
 
-    # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
+    # See https://hexdocs.pm/elixir/main/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: DiscordBot.Supervisor]
     Supervisor.start_link(children, opts)
