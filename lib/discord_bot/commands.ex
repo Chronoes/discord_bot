@@ -1,6 +1,7 @@
 defmodule DiscordBot.Commands do
   alias Nostrum.Constants.ApplicationCommandOptionType
   alias Nostrum.Struct.Interaction
+  alias DiscordBot.State
 
   # https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-callback-type
   @message 4
@@ -40,13 +41,13 @@ defmodule DiscordBot.Commands do
           regex = Regex.compile!(value, "i")
 
           bosses
-          |> Enum.map(fn boss ->
+          |> Stream.map(fn boss ->
             case Regex.run(regex, boss, return: :index) do
               nil -> nil
               [{idx, _}] -> {idx, boss}
             end
           end)
-          |> Enum.reject(&is_nil/1)
+          |> Stream.reject(&is_nil/1)
           |> Enum.sort_by(&elem(&1, 0))
           |> Enum.map(&elem(&1, 1))
       end
@@ -65,50 +66,46 @@ defmodule DiscordBot.Commands do
     %Interaction{data: %{options: options}} = interaction
     %{value: value} = Enum.find(options, fn opt -> opt.name === "name" end)
 
-    players = [
-      "Gim Jongmunn",
-      "Caspyyyy",
-      "Enchseedman",
-      "janes1",
-      "Br4vechicken"
-    ]
+    {{boss_name, total}, player_counts} = DiscordBot.Bosses.get_group_boss(State.players(), value)
 
-    {totals, player_bosses} = DiscordBot.Bosses.fetch_group_bosses(players)
+    if total > 0 do
+      player_totals =
+        player_counts
+        |> Enum.filter(fn {_, count} -> count > 0 end)
+        |> Enum.sort_by(&elem(&1, 1), :desc)
 
-    total = totals[value]
+      left_len = padding_fn(player_totals |> Enum.map(&elem(&1, 0)))
 
-    player_totals =
-      players
-      |> Enum.map(fn player ->
-        {player, player_bosses[player][value]}
-      end)
-      |> Enum.filter(fn {_, count} -> count > 0 end)
-      |> Enum.sort_by(&elem(&1, 1), :desc)
+      content =
+        player_totals
+        |> Enum.map(fn {player, count} ->
+          "#{left_len.(player)}: #{count}"
+        end)
+        |> Enum.join("\n")
 
-    boss_name = DiscordBot.Bosses.boss_display_name(value)
+      boss_name = DiscordBot.Bosses.boss_display_name(boss_name)
 
-    left_len = padding_fn(player_totals |> Enum.map(&elem(&1, 0)))
-
-    content =
-      player_totals
-      |> Enum.map(fn {player, count} ->
-        "#{left_len.(player)}: #{count}"
-      end)
-      |> Enum.join("\n")
-
-    %{
-      type: @message,
-      data: %{
-        content: "**#{boss_name}: #{total}**\n```\n#{content}\n```"
+      %{
+        type: @message,
+        data: %{
+          content: "**#{boss_name}: #{total}**\n```\n#{content}\n```"
+        }
       }
-    }
+    else
+      %{
+        type: @message,
+        data: %{
+          content: "**#{boss_name}: #{total}**"
+        }
+      }
+    end
   end
 
   def handle_interaction(_) do
     %{type: @message, data: %{content: ":white_check_mark:"}}
   end
 
-  def padding_fn(list) do
+  defp padding_fn(list) do
     left_len = list |> Enum.map(fn name -> String.length(name) end) |> Enum.max()
 
     fn name -> String.pad_leading(name, left_len) end

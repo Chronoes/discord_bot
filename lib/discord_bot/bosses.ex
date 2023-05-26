@@ -1,4 +1,8 @@
 defmodule DiscordBot.Bosses do
+  use GenServer
+  require Logger
+  alias DiscordBot.State
+
   @bosses %{
     "Clue_all" => 0,
     "Clue_beginner" => 0,
@@ -80,34 +84,103 @@ defmodule DiscordBot.Bosses do
     "Theatre of Blood Challenge Mode" => "Theatre of Blood (CM)"
   }
 
-  def boss_display_name(name) do
-    Map.get(@boss_renames, name, name)
+  @type boss :: String.t()
+  @type boss_map :: %{boss() => non_neg_integer()}
+  @type table_record :: {State.player(), boss_map(), non_neg_integer()}
+
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  def get_bosses do
-    Map.keys(@bosses)
+  @impl true
+  def init(_state) do
+    table = :ets.new(:bosses, [])
+    {:ok, table}
   end
 
-  def fetch_player_bosses(player) do
-    # TODO: Figure out some sort of caching to not spam the external endpoint
+  @impl true
+  def handle_call({:lookup, player}, _from, table) do
+    {:reply, :ets.lookup(table, player), table}
+  end
+
+  def handle_call({:fetch_player_bosses, player}, _from, table) do
     res =
       Req.get!(
         "https://templeosrs.com/api/player_stats.php?player=#{URI.encode(player)}&bosses=1"
       )
 
-    Map.take(res.body["data"], Map.keys(@bosses))
+    results = Map.take(res.body["data"], Map.keys(@bosses))
+    :ets.insert(table, {player, results, System.monotonic_time(:second)})
+    {:reply, results, table}
   end
 
-  def fetch_group_bosses(players) do
+  @spec fetch_player_bosses(State.player()) :: boss_map()
+  def fetch_player_bosses(player) do
+    GenServer.call(__MODULE__, {:fetch_player_bosses, player})
+  end
+
+  @spec lookup(State.player()) :: [table_record()]
+  def lookup(player) do
+    GenServer.call(__MODULE__, {:lookup, player})
+  end
+
+  @spec boss_display_name(boss()) :: boss()
+  def boss_display_name(name) do
+    Map.get(@boss_renames, name, name)
+  end
+
+  @spec get_bosses :: [boss()]
+  def get_bosses do
+    Map.keys(@bosses)
+  end
+
+  @spec get_player_bosses(State.player()) :: boss_map()
+  def get_player_bosses(player) do
+    case lookup(player) do
+      [] ->
+        Logger.debug("Fetching new boss data for #{player}")
+        fetch_player_bosses(player)
+
+      [{player, results, timestamp}] ->
+        # If data is older than 10min, fetch new
+        if timestamp < System.monotonic_time(:second) - 600 do
+          Logger.debug("Fetching updated boss data for #{player}")
+          fetch_player_bosses(player)
+        else
+          results
+        end
+    end
+  end
+
+  @spec get_group_bosses([State.player()]) :: {boss_map(), [{State.player(), boss_map()}]}
+  def get_group_bosses(players) do
     Enum.reduce(
       players,
-      {@bosses, %{}},
+      {@bosses, []},
       fn player, {totals, all_players} ->
-        player_bosses = fetch_player_bosses(player)
+        player_bosses = get_player_bosses(player)
 
         {
           Map.merge(totals, player_bosses, fn _key, total_c, player_c -> total_c + player_c end),
-          Map.put_new(all_players, player, player_bosses)
+          [{player, player_bosses} | all_players]
+        }
+      end
+    )
+  end
+
+  @spec get_group_boss([State.player()], boss()) ::
+          {{boss(), non_neg_integer()}, [{State.player(), non_neg_integer()}]}
+  def get_group_boss(players, boss) do
+    Enum.reduce(
+      players,
+      {{boss, 0}, []},
+      fn player, {{boss, total_c}, all_players} ->
+        player_bosses = get_player_bosses(player)
+        boss_count = player_bosses[boss]
+
+        {
+          {boss, total_c + boss_count},
+          [{player, boss_count} | all_players]
         }
       end
     )
