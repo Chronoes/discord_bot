@@ -16,8 +16,9 @@ RUN mix release
 FROM bitwalker/alpine-elixir:latest AS runtime
 
 COPY --from=build "$HOME"_build .
-RUN chown -R default: ./prod
+RUN mkdir data
+RUN chown -R default: ./prod ./data
 USER default
 ENV PATH="${HOME}prod/rel/discord_bot/bin:${PATH}"
-VOLUME [ "./players" ]
+WORKDIR ${HOME}/data
 CMD ["discord_bot", "start"]
