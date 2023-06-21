@@ -2,6 +2,7 @@ defmodule DiscordBot.Commands do
   alias Nostrum.Constants.ApplicationCommandOptionType
   alias Nostrum.Struct.Interaction
   alias DiscordBot.State
+  alias DiscordBot.Errors.NoBossError
 
   # https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-callback-type
   @message 4
@@ -30,26 +31,13 @@ defmodule DiscordBot.Commands do
     %Interaction{data: %{options: options}} = interaction
     %{value: value} = Enum.find(options, fn opt -> opt.name === "name" end)
 
-    bosses = DiscordBot.Bosses.get_bosses()
-
     choices =
       case value do
         "" ->
-          Enum.shuffle(bosses)
+          Enum.shuffle(DiscordBot.Bosses.get_bosses())
 
         value ->
-          regex = Regex.compile!(value, "i")
-
-          bosses
-          |> Stream.map(fn boss ->
-            case Regex.run(regex, boss, return: :index) do
-              nil -> nil
-              [{idx, _}] -> {idx, boss}
-            end
-          end)
-          |> Stream.reject(&is_nil/1)
-          |> Enum.sort_by(&elem(&1, 0))
-          |> Enum.map(&elem(&1, 1))
+          DiscordBot.Bosses.find_boss(value)
       end
       |> Enum.take(25)
       |> Enum.map(fn boss ->
@@ -66,7 +54,13 @@ defmodule DiscordBot.Commands do
     %Interaction{data: %{options: options}} = interaction
     %{value: value} = Enum.find(options, fn opt -> opt.name === "name" end)
 
-    {{boss_name, total}, player_counts} = DiscordBot.Bosses.get_group_boss(State.players(), value)
+    boss =
+      case DiscordBot.Bosses.find_boss(value) do
+        [] -> raise NoBossError
+        [boss | _bosses] -> boss
+      end
+
+    {{boss_name, total}, player_counts} = DiscordBot.Bosses.get_group_boss(State.players(), boss)
 
     if total > 0 do
       player_totals =
@@ -99,6 +93,14 @@ defmodule DiscordBot.Commands do
         }
       }
     end
+  rescue
+    e in NoBossError ->
+      %{
+        type: @message,
+        data: %{
+          content: "**#{e.message}**"
+        }
+      }
   end
 
   def handle_interaction(_) do

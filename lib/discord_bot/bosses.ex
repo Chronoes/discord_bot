@@ -1,6 +1,7 @@
 defmodule DiscordBot.Bosses do
   use GenServer
   require Logger
+  alias DiscordBot.Errors.NoBossError
   alias DiscordBot.State
 
   @bosses %{
@@ -80,8 +81,22 @@ defmodule DiscordBot.Bosses do
     "Clue_hard" => "Clue (hard)",
     "Clue_elite" => "Clue (elite)",
     "Clue_master" => "Clue (master)",
+    "KreeArra" => "Kree'Arra",
+    "Kril Tsutsaroth" => "K'ril Tsutsaroth",
     "Chambers of Xeric Challenge Mode" => "Chambers of Xeric (CM)",
     "Theatre of Blood Challenge Mode" => "Theatre of Blood (CM)"
+  }
+  @boss_aliases %{
+    "cox" => "Chambers of Xeric",
+    "sara" => "Commander Zilyana",
+    "bandos" => "General Graardor",
+    "arma" => "KreeArra",
+    "zammy" => "Kril Tsutsaroth",
+    "gg" => "Grotesque Guardians",
+    "cg" => "The Corrupted Gauntlet",
+    "tob" => "Theatre of Blood",
+    "pumpalumpa" => "Phantom Muspah",
+    "toa" => "Tombs of Amascut"
   }
 
   @type boss :: String.t()
@@ -134,6 +149,28 @@ defmodule DiscordBot.Bosses do
     Map.keys(@bosses)
   end
 
+  @spec find_boss(String.t()) :: [boss()]
+  def find_boss(input) do
+    with nil <- @bosses[input] && input,
+         input = String.trim(input) |> String.downcase(),
+         nil <- @boss_aliases[input] do
+      regex = Regex.compile!(input, "i")
+
+      get_bosses()
+      |> Stream.map(fn boss ->
+        case Regex.run(regex, boss, return: :index) do
+          nil -> nil
+          [{idx, _}] -> {idx, boss}
+        end
+      end)
+      |> Stream.reject(&is_nil/1)
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.map(&elem(&1, 1))
+    else
+      boss -> [boss]
+    end
+  end
+
   @spec get_player_bosses(State.player()) :: boss_map()
   def get_player_bosses(player) do
     case lookup(player) do
@@ -171,6 +208,10 @@ defmodule DiscordBot.Bosses do
   @spec get_group_boss([State.player()], boss()) ::
           {{boss(), non_neg_integer()}, [{State.player(), non_neg_integer()}]}
   def get_group_boss(players, boss) do
+    if is_nil(@bosses[boss]) do
+      raise NoBossError
+    end
+
     Enum.reduce(
       players,
       {{boss, 0}, []},
