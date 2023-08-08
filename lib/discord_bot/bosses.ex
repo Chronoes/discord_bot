@@ -71,7 +71,11 @@ defmodule DiscordBot.Bosses do
     "Phantom Muspah" => 0,
     "Artio" => 0,
     "Calvarion" => 0,
-    "Spindel" => 0
+    "Spindel" => 0,
+    "Duke Sucellus" => 0,
+    "The Leviathan" => 0,
+    "The Whisperer" => 0,
+    "Vardorvis" => 0
   }
   @boss_renames %{
     "Clue_all" => "Clue (all)",
@@ -84,7 +88,9 @@ defmodule DiscordBot.Bosses do
     "KreeArra" => "Kree'Arra",
     "Kril Tsutsaroth" => "K'ril Tsutsaroth",
     "Chambers of Xeric Challenge Mode" => "Chambers of Xeric (CM)",
-    "Theatre of Blood Challenge Mode" => "Theatre of Blood (CM)"
+    "Theatre of Blood Challenge Mode" => "Theatre of Blood (CM)",
+    "The Leviathan" => "Leviathan",
+    "The Whisperer" => "Whisperer"
   }
   @boss_aliases %{
     "cox" => "Chambers of Xeric",
@@ -179,8 +185,8 @@ defmodule DiscordBot.Bosses do
         fetch_player_bosses(player)
 
       [{player, results, timestamp}] ->
-        # If data is older than 10min, fetch new
-        if timestamp < System.monotonic_time(:second) - 600 do
+        # If data is older than 30s, fetch new
+        if timestamp < System.monotonic_time(:second) - 30 do
           Logger.debug("Fetching updated boss data for #{player}")
           fetch_player_bosses(player)
         else
