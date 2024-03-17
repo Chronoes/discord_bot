@@ -2,8 +2,16 @@
 # and its dependencies with the aid of the Mix.Config module.
 import Config
 
+config :discord_bot,
+  state_config_path: "./state_config.json"
+
 config :nostrum,
-  token: ""
+  token: "",
+  gateway_intents: [
+    :direct_messages,
+    :guild_messages,
+    :message_content
+  ]
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this

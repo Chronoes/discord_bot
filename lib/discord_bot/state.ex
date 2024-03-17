@@ -1,26 +1,44 @@
 defmodule DiscordBot.State do
   use Agent
+  alias Nostrum.Struct.Channel
 
   @type player :: String.t()
-  defstruct players: []
+  defstruct players: [],
+            channels: []
 
   @type t :: %__MODULE__{
-          players: [player()]
+          players: [player()],
+          channels: [Channel.id()]
         }
+
+  defp save_state(%__MODULE__{} = state) do
+    File.write!(
+      Application.get_env(:discord_bot, :state_config_path),
+      Jason.encode!(state)
+    )
+
+    state
+  end
+
+  defp load_file do
+    data = Jason.decode!(File.read!(Application.get_env(:discord_bot, :state_config_path)))
+    %__MODULE__{players: data["players"], channels: data["channels"]}
+  end
 
   def start_link(_init) do
     Agent.start_link(
       fn ->
-        {:ok, _} = :dets.open_file(:players, [])
-
-        players =
-          :dets.traverse(:players, fn player -> {:continue, player} end) |> Enum.map(&elem(&1, 0))
-
-        :dets.close(:players)
-        %__MODULE__{players: players}
+        load_file()
       end,
       name: __MODULE__
     )
+  end
+
+  @spec reload_from_file() :: :ok
+  def reload_from_file do
+    Agent.update(__MODULE__, fn _state ->
+      load_file()
+    end)
   end
 
   @spec players :: [player()]
@@ -31,10 +49,13 @@ defmodule DiscordBot.State do
   @spec set_players([player()]) :: :ok
   def set_players(players) do
     Agent.update(__MODULE__, fn state ->
-      :dets.open_file(:players, [])
-      :dets.insert(:players, Enum.map(players, fn p -> {p} end))
-      :dets.close(:players)
-      %__MODULE__{state | players: players}
+      save_state(%__MODULE__{state | players: players})
     end)
+  end
+
+  @spec is_registered_channel(Channel.id()) :: boolean()
+  def is_registered_channel(channel_id) do
+    Agent.get(__MODULE__, & &1.channels)
+    |> Enum.member?(channel_id)
   end
 end

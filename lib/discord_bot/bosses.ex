@@ -2,6 +2,7 @@ defmodule DiscordBot.Bosses do
   use GenServer
   require Logger
   alias DiscordBot.Errors.NoBossError
+  alias DiscordBot.TempleOsrs
   alias DiscordBot.State
 
   @bosses %{
@@ -125,10 +126,7 @@ defmodule DiscordBot.Bosses do
   end
 
   def handle_call({:fetch_player_bosses, player}, _from, table) do
-    res =
-      Req.get!(
-        "https://templeosrs.com/api/player_stats.php?player=#{URI.encode(player)}&bosses=1"
-      )
+    res = TempleOsrs.fetch_player_stats(player)
 
     results = Map.take(res.body["data"], Map.keys(@bosses))
     :ets.insert(table, {player, results, System.monotonic_time(:second)})
