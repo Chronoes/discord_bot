@@ -1,21 +1,9 @@
 # DiscordBot
 
-**TODO: Add description**
+Use Docker Compose to run this bot
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `discord_bot` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:discord_bot, "~> 0.1.0"}
-  ]
-end
+```
+docker compose up -d --build
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/discord_bot>.
-
+Make sure **config/runtime.exs** is accessible as it is encrypted in repo.

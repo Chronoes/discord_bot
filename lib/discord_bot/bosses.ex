@@ -76,7 +76,9 @@ defmodule DiscordBot.Bosses do
     "Duke Sucellus" => 0,
     "The Leviathan" => 0,
     "The Whisperer" => 0,
-    "Vardorvis" => 0
+    "Vardorvis" => 0,
+    "Scurrius" => 0,
+    "Lunar Chests" => 0
   }
   @boss_renames %{
     "Clue_all" => "Clue (all)",
@@ -103,6 +105,9 @@ defmodule DiscordBot.Bosses do
     "cg" => "The Corrupted Gauntlet",
     "tob" => "Theatre of Blood",
     "pumpalumpa" => "Phantom Muspah",
+    "pm" => "Lunar Chests",
+    "perilous moons" => "Lunar Chests",
+    "lc" => "Lunar Chests",
     "toa" => "Tombs of Amascut"
   }
 
