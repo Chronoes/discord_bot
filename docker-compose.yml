@@ -1,6 +1,7 @@
 version: '3'
 services:
   discord_bot:
+    image: osrs-discord-bot:latest
     build: .
     restart: unless-stopped
     volumes:
