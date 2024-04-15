@@ -1,4 +1,15 @@
 {
   "players": ["janes1", "Enchseedman", "Caspyyyy", "Br4vechicken", "Gim Jongmunn"],
-  "channels": []
+  "guilds": [
+    {
+      "id": 123456,
+      "commands": ["kc"],
+      "channels": [
+        {
+          "id": 789,
+          "actions": ["competition"]
+        }
+      ]
+    }
+  ]
 }

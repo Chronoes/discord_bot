@@ -9,21 +9,25 @@ defmodule DiscordBot.Commands do
   @autocomplete_result 8
 
   def create_commands(guild_id) do
-    command = %{
-      name: "kc",
-      description: "list boss KC for GIM",
-      options: [
-        %{
-          name: "name",
-          description: "Name of boss",
-          type: ApplicationCommandOptionType.string(),
-          required: true,
-          autocomplete: true
-        }
-      ]
-    }
+    allowed_commands = State.get_guild_commands(guild_id)
 
-    Nostrum.Api.create_guild_application_command(guild_id, command)
+    if Enum.member?(allowed_commands, "kc") do
+      command = %{
+        name: "kc",
+        description: "list boss KC for GIM",
+        options: [
+          %{
+            name: "name",
+            description: "Name of boss",
+            type: ApplicationCommandOptionType.string(),
+            required: true,
+            autocomplete: true
+          }
+        ]
+      }
+
+      Nostrum.Api.create_guild_application_command(guild_id, command)
+    end
   end
 
   @spec handle_interaction(Interaction.t()) :: map()
