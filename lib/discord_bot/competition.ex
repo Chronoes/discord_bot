@@ -39,7 +39,7 @@ defmodule DiscordBot.Competition do
     response.body
   end
 
-  @spec update_player_datapoints(String.t()) :: term()
+  @spec update_player_datapoints(binary() | integer()) :: term()
   def update_player_datapoints(comp_id) do
     GenServer.call(__MODULE__, {:update_player_datapoints, comp_id})
   end
@@ -60,6 +60,8 @@ defmodule DiscordBot.Competition do
 
   @impl true
   def handle_call({:update_player_datapoints, comp_id}, _from, state) do
+    comp_id = to_string(comp_id)
+
     if state.in_progress do
       Logger.info("Competition #{state.in_progress} datapoint update already in progress")
       {:reply, state.in_progress, state}
@@ -78,9 +80,16 @@ defmodule DiscordBot.Competition do
   def handle_info({:run_comp_update, comp_id}, state) do
     Task.start(fn ->
       players = fetch_members(comp_id)
+      player_count = Enum.count(players)
+
+      interval = 12_000
+
+      # Sleep interval + 1s processing time per player
+      expected_finish =
+        DateTime.add(DateTime.utc_now(), player_count * (interval + 1000), :millisecond)
 
       Logger.info(
-        "Updating datapoints for #{Enum.count(players)} members of competition #{comp_id}"
+        "Updating datapoints for #{player_count} members of competition #{comp_id}. Predicted finish: #{DateTime.to_string(expected_finish)}"
       )
 
       Enum.each(players, fn player ->
@@ -90,7 +99,7 @@ defmodule DiscordBot.Competition do
           _ -> Logger.error("Failed to update datapoint for player #{player}")
         end
 
-        Process.sleep(13_000)
+        Process.sleep(interval)
       end)
 
       Logger.info("Competition #{comp_id} datapoint update complete")
