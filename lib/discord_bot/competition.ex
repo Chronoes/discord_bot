@@ -4,6 +4,8 @@ defmodule DiscordBot.Competition do
   alias Nostrum.Struct.Message
   alias DiscordBot.TempleOsrs
 
+  @type comp_id :: binary() | integer()
+
   defstruct in_progress: false, refresh_ref: nil
 
   defp get_refresh_time() do
@@ -24,7 +26,10 @@ defmodule DiscordBot.Competition do
     DateTime.diff(end_time, DateTime.utc_now(), :millisecond)
   end
 
-  defp setup_comp_refresh(state, comp_id) do
+  defp setup_comp_refresh(state, comp_id),
+    do: setup_comp_refresh(state, comp_id, get_refresh_time())
+
+  defp setup_comp_refresh(state, comp_id, refresh_time) do
     if state.refresh_ref do
       time_left = Process.cancel_timer(state.refresh_ref)
 
@@ -33,11 +38,10 @@ defmodule DiscordBot.Competition do
       end
     end
 
-    end_time = get_refresh_time()
-    milliseconds = calculate_pre_end_time(end_time)
+    milliseconds = calculate_pre_end_time(refresh_time)
 
     Logger.info(
-      "Setting up competition refresh for #{comp_id} at #{DateTime.to_string(end_time)} (#{milliseconds} ms)"
+      "Setting up competition refresh for #{comp_id} at #{DateTime.to_string(refresh_time)} (#{milliseconds} ms)"
     )
 
     ref = Process.send_after(self(), {:run_comp_update, comp_id}, milliseconds)
@@ -58,13 +62,12 @@ defmodule DiscordBot.Competition do
     {:ok, state}
   end
 
-  @spec fetch_members(binary()) :: [binary()]
-  def fetch_members(comp_id) do
+  defp fetch_members(comp_id) do
     response = TempleOsrs.fetch_competition_members(comp_id)
     response.body
   end
 
-  @spec update_player_datapoints(binary() | integer()) :: term()
+  @spec update_player_datapoints(comp_id()) :: term()
   def update_player_datapoints(comp_id) do
     GenServer.call(__MODULE__, {:update_player_datapoints, comp_id})
   end
@@ -84,6 +87,11 @@ defmodule DiscordBot.Competition do
         DateTime.add(DateTime.utc_now(), ms, :millisecond)
       end
     end
+  end
+
+  @spec change_refresh_time(comp_id(), DateTime.t()) :: :ok
+  def change_refresh_time(comp_id, refresh_time) do
+    GenServer.cast(__MODULE__, {:change_refresh_time, comp_id, refresh_time})
   end
 
   def check_message(%Message{content: content} = _message) do
@@ -121,6 +129,11 @@ defmodule DiscordBot.Competition do
   @impl true
   def handle_cast({:end_comp_update, _comp_id}, state) do
     {:noreply, %{state | in_progress: false}}
+  end
+
+  @impl true
+  def handle_cast({:change_refresh_time, comp_id, refresh_time}, state) do
+    {:noreply, setup_comp_refresh(state, to_string(comp_id), refresh_time)}
   end
 
   @impl true
