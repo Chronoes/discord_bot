@@ -4,27 +4,52 @@ defmodule DiscordBot.Competition do
   alias Nostrum.Struct.Message
   alias DiscordBot.TempleOsrs
 
-  defp calculate_pre_end_time() do
+  defstruct in_progress: false, refresh_ref: nil
+
+  defp get_refresh_time() do
     now = DateTime.utc_now()
+    timestamp = Time.new!(23, 0, 0)
     # end time sunday of the current week
-    end_time = DateTime.new!(Date.end_of_week(now), Time.new!(23, 0, 0))
-    DateTime.diff(end_time, now, :millisecond)
+    end_time = DateTime.new!(Date.end_of_week(now), timestamp)
+
+    if DateTime.after?(now, end_time) do
+      # In case it's not new week yet
+      DateTime.new!(Date.end_of_week(DateTime.add(now, 1, :hour)), timestamp)
+    else
+      end_time
+    end
+  end
+
+  defp calculate_pre_end_time(end_time) do
+    DateTime.diff(end_time, DateTime.utc_now(), :millisecond)
   end
 
   defp setup_comp_refresh(state, comp_id) do
     if state.refresh_ref do
       time_left = Process.cancel_timer(state.refresh_ref)
-      Logger.info("Cancelling competition refresh due in #{time_left} ms")
+
+      if time_left !== false and time_left > 0 do
+        Logger.info("Cancelling competition refresh due in #{time_left} ms")
+      end
     end
 
-    milliseconds = calculate_pre_end_time()
-    Logger.info("Setting up competition refresh for #{comp_id} in #{milliseconds} ms")
+    end_time = get_refresh_time()
+    milliseconds = calculate_pre_end_time(end_time)
+
+    Logger.info(
+      "Setting up competition refresh for #{comp_id} at #{DateTime.to_string(end_time)} (#{milliseconds} ms)"
+    )
+
     ref = Process.send_after(self(), {:run_comp_update, comp_id}, milliseconds)
     %{state | refresh_ref: ref}
   end
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, %{in_progress: false, refresh_ref: nil}, name: __MODULE__)
+    GenServer.start_link(
+      __MODULE__,
+      %__MODULE__{in_progress: false, refresh_ref: nil},
+      name: __MODULE__
+    )
   end
 
   @impl true
@@ -42,6 +67,23 @@ defmodule DiscordBot.Competition do
   @spec update_player_datapoints(binary() | integer()) :: term()
   def update_player_datapoints(comp_id) do
     GenServer.call(__MODULE__, {:update_player_datapoints, comp_id})
+  end
+
+  @spec time_remaining_for_update() :: DateTime.t() | false
+  @spec time_remaining_for_update(true) :: pos_integer() | false
+  @spec time_remaining_for_update(false) :: DateTime.t() | false
+  def time_remaining_for_update(in_ms \\ false) do
+    ms = GenServer.call(__MODULE__, :time_remaining_for_update)
+
+    if ms == false do
+      false
+    else
+      if in_ms do
+        ms
+      else
+        DateTime.add(DateTime.utc_now(), ms, :millisecond)
+      end
+    end
   end
 
   def check_message(%Message{content: content} = _message) do
@@ -69,6 +111,11 @@ defmodule DiscordBot.Competition do
       send(self(), {:run_comp_update, comp_id})
       {:reply, comp_id, %{state | in_progress: comp_id}}
     end
+  end
+
+  @impl true
+  def handle_call(:time_remaining_for_update, _from, state) do
+    {:reply, Process.read_timer(state.refresh_ref), state}
   end
 
   @impl true
