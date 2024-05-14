@@ -4,7 +4,6 @@ defmodule DiscordBot.Consumer do
 
   alias Nostrum.Api
 
-  @behaviour Nostrum.Consumer
   def handle_event({:READY, event, _ws_state}) do
     %{guilds: guilds} = event
 
