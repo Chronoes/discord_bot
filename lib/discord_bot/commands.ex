@@ -64,12 +64,29 @@ defmodule DiscordBot.Commands do
         [boss | _bosses] -> boss
       end
 
-    {{boss_name, total}, player_counts} = DiscordBot.Bosses.get_group_boss(State.players(), boss)
+    grouped_players =
+      State.players()
+      |> Enum.map(fn {group, players} ->
+        Tuple.append(DiscordBot.Bosses.get_group_boss(players, boss), group)
+      end)
+
+    total = Enum.map(grouped_players, &elem(&1, 0)) |> Enum.sum()
+    boss_name = DiscordBot.Bosses.boss_display_name(boss)
 
     if total > 0 do
       player_totals =
-        player_counts
-        |> Enum.filter(fn {_, count} -> count > 0 end)
+        grouped_players
+        |> Enum.flat_map(fn {_, player_counts, group} ->
+          player_counts
+          |> Enum.filter(fn {_, count} -> count > 0 end)
+          |> Enum.map(fn {player, count} ->
+            if group === :unspecified do
+              {player, count}
+            else
+              {"[#{group}] #{player}", count}
+            end
+          end)
+        end)
         |> Enum.sort_by(&elem(&1, 1), :desc)
 
       left_len = padding_fn(player_totals |> Enum.map(&elem(&1, 0)))
@@ -81,12 +98,22 @@ defmodule DiscordBot.Commands do
         end)
         |> Enum.join("\n")
 
-      boss_name = DiscordBot.Bosses.boss_display_name(boss_name)
+      boss_totals =
+        grouped_players
+        |> Enum.reject(fn {_, _, group} -> group === :unspecified end)
+        |> Enum.map(fn {count, _, group} -> "[#{group}]: #{count}" end)
+
+      group_boss_header =
+        if length(boss_totals) > 0 do
+          "\n#{Enum.join(boss_totals, "\n")}"
+        else
+          ""
+        end
 
       %{
         type: @message,
         data: %{
-          content: "**#{boss_name}: #{total}**\n```\n#{content}\n```"
+          content: "**#{boss_name}: #{total}**#{group_boss_header}\n```\n#{content}\n```"
         }
       }
     else

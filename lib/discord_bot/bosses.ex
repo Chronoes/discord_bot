@@ -215,7 +215,7 @@ defmodule DiscordBot.Bosses do
   end
 
   @spec get_group_boss([State.player()], boss()) ::
-          {{boss(), non_neg_integer()}, [{State.player(), non_neg_integer()}]}
+          {non_neg_integer(), [{State.player(), non_neg_integer()}]}
   def get_group_boss(players, boss) do
     if is_nil(@bosses[boss]) do
       raise NoBossError
@@ -223,13 +223,13 @@ defmodule DiscordBot.Bosses do
 
     Enum.reduce(
       players,
-      {{boss, 0}, []},
-      fn player, {{boss, total_c}, all_players} ->
+      {0, []},
+      fn player, {total_c, all_players} ->
         player_bosses = get_player_bosses(player)
         boss_count = player_bosses[boss]
 
         {
-          {boss, total_c + boss_count},
+          total_c + boss_count,
           [{player, boss_count} | all_players]
         }
       end

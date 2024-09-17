@@ -11,7 +11,8 @@ config :nostrum,
     :direct_messages,
     :guild_messages,
     :message_content
-  ]
+  ],
+  ffmpeg: nil
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
