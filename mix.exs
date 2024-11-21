@@ -26,7 +26,8 @@ defmodule DiscordBot.MixProject do
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
       {:nostrum, "~> 0.10.0"},
       {:req, "~> 0.3.0"},
-      {:jason, "~> 1.4.1"}
+      {:jason, "~> 1.4.1"},
+      {:sched_ex, "~> 1.1.4"}
     ]
   end
 end

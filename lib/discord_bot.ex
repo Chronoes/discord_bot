@@ -4,7 +4,11 @@ defmodule DiscordBot do
   # See https://hexdocs.pm/elixir/main/Application.html
   # for more information on OTP Applications
   def start(_type, _args) do
-    children = [DiscordBot.State, DiscordBot.Consumer, DiscordBot.Bosses, DiscordBot.Competition]
+    children =
+      Enum.concat([
+        [DiscordBot.State, DiscordBot.Consumer, DiscordBot.Bosses, DiscordBot.Competition],
+        DiscordBot.Countdown.tasks()
+      ])
 
     # See https://hexdocs.pm/elixir/main/Supervisor.html
     # for other strategies and supported options
