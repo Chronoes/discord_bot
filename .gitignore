@@ -27,3 +27,6 @@ discord_bot-*.tar
 /tmp/
 
 /state_config.json
+
+# Ignore runtime configuration file, must be added at deploy
+/config/runtime.exs
