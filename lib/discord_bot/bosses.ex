@@ -6,6 +6,8 @@ defmodule DiscordBot.Bosses do
   alias DiscordBot.State
 
   @bosses %{
+    "Amoxliatl" => 0,
+    "Araxxor" => 0,
     "Clue_all" => 0,
     "Clue_beginner" => 0,
     "Clue_easy" => 0,
@@ -35,16 +37,20 @@ defmodule DiscordBot.Bosses do
     "Giant Mole" => 0,
     "Grotesque Guardians" => 0,
     "Hespori" => 0,
+    "Hueycoatl" => 0,
     "Kalphite Queen" => 0,
     "King Black Dragon" => 0,
     "Kraken" => 0,
     "KreeArra" => 0,
     "Kril Tsutsaroth" => 0,
+    "Lunar Chests" => 0,
     "Mimic" => 0,
     "Obor" => 0,
     "Sarachnis" => 0,
     "Scorpia" => 0,
+    "Scurrius" => 0,
     "Skotizo" => 0,
+    "Sol Heredit" => 0,
     "The Gauntlet" => 0,
     "The Corrupted Gauntlet" => 0,
     "Theatre of Blood" => 0,
@@ -76,9 +82,7 @@ defmodule DiscordBot.Bosses do
     "Duke Sucellus" => 0,
     "The Leviathan" => 0,
     "The Whisperer" => 0,
-    "Vardorvis" => 0,
-    "Scurrius" => 0,
-    "Lunar Chests" => 0
+    "Vardorvis" => 0
   }
   @boss_renames %{
     "Clue_all" => "Clue (all)",
@@ -108,7 +112,10 @@ defmodule DiscordBot.Bosses do
     "pm" => "Lunar Chests",
     "perilous moons" => "Lunar Chests",
     "lc" => "Lunar Chests",
-    "toa" => "Tombs of Amascut"
+    "toa" => "Tombs of Amascut",
+    "huey" => "Hueycoatl",
+    "amox" => "Amoxliatl",
+    "colosseum" => "Sol Heredit"
   }
 
   @type boss :: String.t()
