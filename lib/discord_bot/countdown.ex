@@ -1,27 +1,27 @@
 defmodule DiscordBot.Countdown do
   require Logger
-  @event_date ~U[2024-11-27 12:00:00Z]
+  @event_date ~U[2024-11-27 12:30:00Z]
   @channel_id 1_179_025_071_692_578_927
   # @channel_id 1_111_266_719_370_055_741
 
   def tasks do
     [
-      %{
-        id: "daily_reminder",
-        start: {
-          SchedEx,
-          :run_every,
-          [__MODULE__, :daily_reminder, [:sched_ex_scheduled_time], "0 15 * * *"]
-        }
-      },
-      %{
-        id: "hourly_reminder",
-        start: {
-          SchedEx,
-          :run_every,
-          [__MODULE__, :hourly_reminder, [:sched_ex_scheduled_time], "0 6-15 * * *"]
-        }
-      }
+      # %{
+      #   id: "daily_reminder",
+      #   start: {
+      #     SchedEx,
+      #     :run_every,
+      #     [__MODULE__, :daily_reminder, [:sched_ex_scheduled_time], "0 15 * * *"]
+      #   }
+      # },
+      # %{
+      #   id: "hourly_reminder",
+      #   start: {
+      #     SchedEx,
+      #     :run_every,
+      #     [__MODULE__, :hourly_reminder, [:sched_ex_scheduled_time], "0 6-15 * * *"]
+      #   }
+      # }
     ]
   end
 
