@@ -118,6 +118,12 @@ defmodule DiscordBot.Bosses do
     "colosseum" => "Sol Heredit"
   }
 
+  @boss_grouping [
+    ["Chambers of Xeric", "Chambers of Xeric Challenge Mode"],
+    ["Theatre of Blood", "Theatre of Blood Challenge Mode"],
+    ["Tombs of Amascut", "Tombs of Amascut Expert"]
+  ]
+
   @type boss :: String.t()
   @type boss_map :: %{boss() => non_neg_integer()}
   @type table_record :: {State.player(), boss_map(), non_neg_integer()}
@@ -195,8 +201,8 @@ defmodule DiscordBot.Bosses do
         fetch_player_bosses(player)
 
       [{player, results, timestamp}] ->
-        # If data is older than 30s, fetch new
-        if timestamp < System.monotonic_time(:second) - 30 do
+        # If data is older than 120s, fetch new
+        if timestamp < System.monotonic_time(:second) - 120 do
           Logger.debug("Fetching updated boss data for #{player}")
           fetch_player_bosses(player)
         else
@@ -241,5 +247,12 @@ defmodule DiscordBot.Bosses do
         }
       end
     )
+  end
+
+  def get_related_bosses(boss) do
+    case Enum.filter(@boss_grouping, fn group -> Enum.member?(group, boss) end) do
+      [] -> [boss]
+      [group] -> group
+    end
   end
 end

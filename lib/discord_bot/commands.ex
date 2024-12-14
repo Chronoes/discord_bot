@@ -64,6 +64,32 @@ defmodule DiscordBot.Commands do
         [boss | _bosses] -> boss
       end
 
+    content =
+      DiscordBot.Bosses.get_related_bosses(boss)
+      |> Enum.map(&get_boss_message_content/1)
+      |> Enum.join("\n")
+
+    %{
+      type: @message,
+      data: %{
+        content: content
+      }
+    }
+  rescue
+    e in NoBossError ->
+      %{
+        type: @message,
+        data: %{
+          content: "**#{e.message}**"
+        }
+      }
+  end
+
+  def handle_interaction(_) do
+    %{type: @message, data: %{content: ":white_check_mark:"}}
+  end
+
+  defp get_boss_message_content(boss) do
     grouped_players =
       State.players()
       |> Enum.map(fn {group, players} ->
@@ -110,32 +136,10 @@ defmodule DiscordBot.Commands do
           ""
         end
 
-      %{
-        type: @message,
-        data: %{
-          content: "**#{boss_name}: #{total}**#{group_boss_header}\n```\n#{content}\n```"
-        }
-      }
+      "**#{boss_name}: #{total}**#{group_boss_header}\n```\n#{content}\n```"
     else
-      %{
-        type: @message,
-        data: %{
-          content: "**#{boss_name}: #{total}**"
-        }
-      }
+      "**#{boss_name}: #{total}**"
     end
-  rescue
-    e in NoBossError ->
-      %{
-        type: @message,
-        data: %{
-          content: "**#{e.message}**"
-        }
-      }
-  end
-
-  def handle_interaction(_) do
-    %{type: @message, data: %{content: ":white_check_mark:"}}
   end
 
   defp padding_fn(list) do
