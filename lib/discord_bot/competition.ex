@@ -3,6 +3,7 @@ defmodule DiscordBot.Competition do
   require Logger
   alias Nostrum.Struct.Message
   alias DiscordBot.TempleOsrs
+  alias DiscordBot.Guilds
 
   @type comp_id :: binary() | integer()
 
@@ -173,14 +174,14 @@ defmodule DiscordBot.Competition do
   @impl true
   def handle_info(:setup_comp_refresh, state) do
     comp_id =
-      DiscordBot.State.get_registered_guilds()
-      |> Enum.flat_map(fn {_guild_id, guild} ->
+      Guilds.get_all_guilds()
+      |> Enum.flat_map(fn guild ->
         guild.channels
-        |> Enum.filter(fn {_channel_id, channel} ->
+        |> Enum.filter(fn channel ->
           Enum.member?(channel.actions, :competition)
         end)
-        |> Enum.flat_map(fn {channel_id, _channel} ->
-          case Nostrum.Api.get_channel_messages(channel_id, 5) do
+        |> Enum.flat_map(fn channel ->
+          case Nostrum.Api.Channel.messages(channel.channel_id, 5) do
             {:ok, messages} ->
               messages
               |> Enum.map(fn msg ->
@@ -196,7 +197,7 @@ defmodule DiscordBot.Competition do
 
             {:error, err} ->
               Logger.error(
-                "Channel #{channel_id} received HTTP #{err.status_code}, Discord error #{err.response.code}: #{err.response.message}"
+                "Channel #{channel.channel_id} received HTTP #{err.status_code}, Discord error #{err.response.code}: #{err.response.message}"
               )
 
               []

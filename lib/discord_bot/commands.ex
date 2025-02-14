@@ -1,7 +1,8 @@
 defmodule DiscordBot.Commands do
   alias Nostrum.Constants.ApplicationCommandOptionType
   alias Nostrum.Struct.Interaction
-  alias DiscordBot.State
+  alias DiscordBot.Guilds
+  alias DiscordBot.Players
   alias DiscordBot.Errors.NoBossError
 
   # https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-callback-type
@@ -9,9 +10,15 @@ defmodule DiscordBot.Commands do
   @autocomplete_result 8
 
   def create_commands(guild_id) do
-    allowed_commands = State.get_guild_commands(guild_id)
+    guild = Guilds.get_guild(guild_id)
 
-    if Enum.member?(allowed_commands, "kc") do
+    if guild do
+      init_commands(guild)
+    end
+  end
+
+  defp init_commands(%Guilds.Guild{} = guild) do
+    if Enum.member?(guild.commands, :kc) do
       command = %{
         name: "kc",
         description: "list boss KC for GIM",
@@ -26,7 +33,17 @@ defmodule DiscordBot.Commands do
         ]
       }
 
-      Nostrum.Api.create_guild_application_command(guild_id, command)
+      Nostrum.Api.ApplicationCommand.create_guild_command(guild.guild_id, command)
+    end
+
+    if Enum.member?(guild.commands, :deaths) do
+      command = %{
+        name: "oof",
+        description: "list deaths recorded in channel",
+        options: []
+      }
+
+      Nostrum.Api.ApplicationCommand.create_guild_command(guild.guild_id, command)
     end
   end
 
@@ -85,15 +102,29 @@ defmodule DiscordBot.Commands do
       }
   end
 
+  def handle_interaction(%Interaction{data: %{name: "oof"}} = _interaction) do
+    players = Players.get_death_count_by_player()
+
+    content = get_death_message_content(players)
+
+    %{
+      type: @message,
+      data: %{
+        content: content
+      }
+    }
+  end
+
   def handle_interaction(_) do
     %{type: @message, data: %{content: ":white_check_mark:"}}
   end
 
   defp get_boss_message_content(boss) do
     grouped_players =
-      State.players()
+      Players.get_all_players()
+      |> Enum.group_by(& &1.group, & &1.display_name)
       |> Enum.map(fn {group, players} ->
-        Tuple.append(DiscordBot.Bosses.get_group_boss(players, boss), group)
+        Tuple.insert_at(DiscordBot.Bosses.get_group_boss(players, boss), 2, group)
       end)
 
     total = Enum.map(grouped_players, &elem(&1, 0)) |> Enum.sum()
@@ -106,7 +137,7 @@ defmodule DiscordBot.Commands do
           player_counts
           |> Enum.filter(fn {_, count} -> count > 0 end)
           |> Enum.map(fn {player, count} ->
-            if group === :unspecified do
+            if is_nil(group) do
               {player, count}
             else
               {"[#{group}] #{player}", count}
@@ -140,6 +171,18 @@ defmodule DiscordBot.Commands do
     else
       "**#{boss_name}: #{total}**"
     end
+  end
+
+  defp get_death_message_content(players) do
+    left_len = padding_fn(players |> Enum.map(fn {player, _} -> player.display_name end))
+
+    list_content =
+      players
+      |> Enum.sort_by(&elem(&1, 1), :desc)
+      |> Enum.map(fn {player, count} -> "#{left_len.(player.display_name)}: #{count}" end)
+      |> Enum.join("\n")
+
+    "**Deaths**\n```\n#{list_content}\n```"
   end
 
   defp padding_fn(list) do
