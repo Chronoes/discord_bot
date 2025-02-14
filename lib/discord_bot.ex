@@ -6,7 +6,12 @@ defmodule DiscordBot do
   def start(_type, _args) do
     children =
       Enum.concat([
-        [DiscordBot.State, DiscordBot.Consumer, DiscordBot.Bosses, DiscordBot.Competition],
+        [
+          DiscordBot.Repo,
+          DiscordBot.Consumer,
+          DiscordBot.Bosses,
+          DiscordBot.Competition
+        ],
         DiscordBot.Countdown.tasks()
       ])
 

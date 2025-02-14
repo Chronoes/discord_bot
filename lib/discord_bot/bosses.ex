@@ -3,7 +3,6 @@ defmodule DiscordBot.Bosses do
   require Logger
   alias DiscordBot.Errors.NoBossError
   alias DiscordBot.TempleOsrs
-  alias DiscordBot.State
 
   @bosses %{
     "Amoxliatl" => 0,
@@ -124,9 +123,10 @@ defmodule DiscordBot.Bosses do
     ["Tombs of Amascut", "Tombs of Amascut Expert"]
   ]
 
+  @type player :: String.t()
   @type boss :: String.t()
   @type boss_map :: %{boss() => non_neg_integer()}
-  @type table_record :: {State.player(), boss_map(), non_neg_integer()}
+  @type table_record :: {player(), boss_map(), non_neg_integer()}
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -151,12 +151,12 @@ defmodule DiscordBot.Bosses do
     {:reply, results, table}
   end
 
-  @spec fetch_player_bosses(State.player()) :: boss_map()
+  @spec fetch_player_bosses(player()) :: boss_map()
   def fetch_player_bosses(player) do
     GenServer.call(__MODULE__, {:fetch_player_bosses, player})
   end
 
-  @spec lookup(State.player()) :: [table_record()]
+  @spec lookup(player()) :: [table_record()]
   def lookup(player) do
     GenServer.call(__MODULE__, {:lookup, player})
   end
@@ -193,7 +193,7 @@ defmodule DiscordBot.Bosses do
     end
   end
 
-  @spec get_player_bosses(State.player()) :: boss_map()
+  @spec get_player_bosses(player()) :: boss_map()
   def get_player_bosses(player) do
     case lookup(player) do
       [] ->
@@ -211,7 +211,7 @@ defmodule DiscordBot.Bosses do
     end
   end
 
-  @spec get_group_bosses([State.player()]) :: {boss_map(), [{State.player(), boss_map()}]}
+  @spec get_group_bosses([player()]) :: {boss_map(), [{player(), boss_map()}]}
   def get_group_bosses(players) do
     Enum.reduce(
       players,
@@ -227,8 +227,8 @@ defmodule DiscordBot.Bosses do
     )
   end
 
-  @spec get_group_boss([State.player()], boss()) ::
-          {non_neg_integer(), [{State.player(), non_neg_integer()}]}
+  @spec get_group_boss([player()], boss()) ::
+          {non_neg_integer(), [{player(), non_neg_integer()}]}
   def get_group_boss(players, boss) do
     if is_nil(@bosses[boss]) do
       raise NoBossError

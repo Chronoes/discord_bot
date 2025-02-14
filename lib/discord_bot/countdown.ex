@@ -31,7 +31,7 @@ defmodule DiscordBot.Countdown do
 
       days_left = Date.diff(@event_date, ref_time)
 
-      Nostrum.Api.create_message(@channel_id,
+      Nostrum.Api.Message.create(@channel_id,
         content:
           "**#{days_left} #{if days_left == 1, do: "päev", else: "päeva"} liiga alguseni!**"
       )
@@ -45,13 +45,13 @@ defmodule DiscordBot.Countdown do
 
         hours_left = DateTime.diff(@event_date, ref_time, :hour)
 
-        Nostrum.Api.create_message(@channel_id,
+        Nostrum.Api.Message.create(@channel_id,
           content:
             "**#{if hours_left == 1, do: "Üks tund", else: "#{hours_left} tundi"} veel liigani!**"
         )
       else
         if DateTime.diff(@event_date, exec_time, :minute) <= 1 do
-          Nostrum.Api.create_message(@channel_id, content: "**Liiga on alanud!** loodetavasti")
+          Nostrum.Api.Message.create(@channel_id, content: "**Liiga on alanud!** loodetavasti")
         end
       end
     end

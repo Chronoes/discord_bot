@@ -26,7 +26,8 @@ discord_bot-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-/state_config.json
+# DB file
+/discord_bot.sqlite*
 
 # Ignore runtime configuration file, must be added at deploy
 /config/runtime.exs

@@ -27,7 +27,9 @@ defmodule DiscordBot.MixProject do
       {:nostrum, "~> 0.10.0"},
       {:req, "~> 0.3.0"},
       {:jason, "~> 1.4.1"},
-      {:sched_ex, "~> 1.1.4"}
+      {:sched_ex, "~> 1.1.4"},
+      {:ecto_sql, "~> 3.12"},
+      {:ecto_sqlite3, "~> 0.18"}
     ]
   end
 end

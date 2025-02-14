@@ -3,7 +3,7 @@
 import Config
 
 config :discord_bot,
-  state_config_path: "./state_config.json"
+  ecto_repos: [DiscordBot.Repo]
 
 config :nostrum,
   token: "",
@@ -13,6 +13,8 @@ config :nostrum,
     :message_content
   ],
   ffmpeg: nil
+
+config :discord_bot, DiscordBot.Repo, database: "discord_bot.sqlite"
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
