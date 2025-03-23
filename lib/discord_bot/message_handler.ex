@@ -33,7 +33,7 @@ defmodule DiscordBot.MessageHandler do
   end
 
   defp handle_deaths_message(%Message{id: msg_id, channel_id: channel_id} = message) do
-    case DiscordBot.Deaths.parse_deaths_from_message(message) do
+    case DiscordBot.Deaths.add_deaths_from_message(message) do
       :noop ->
         :ok
 

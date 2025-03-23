@@ -116,7 +116,7 @@ defmodule DiscordBot.Commands do
   end
 
   def handle_interaction(_) do
-    %{type: @message, data: %{content: ":white_check_mark:"}}
+    %{type: @message, data: %{content: "N/A"}}
   end
 
   defp get_boss_message_content(boss) do
@@ -174,15 +174,23 @@ defmodule DiscordBot.Commands do
   end
 
   defp get_death_message_content(players) do
-    left_len = padding_fn(players |> Enum.map(fn {player, _} -> player.display_name end))
+    left_len = padding_fn(players |> Enum.map(fn {player, _, _} -> player.display_name end))
 
     list_content =
       players
       |> Enum.sort_by(&elem(&1, 1), :desc)
-      |> Enum.map(fn {player, count} -> "#{left_len.(player.display_name)}: #{count}" end)
+      |> Enum.map(fn {player, pvm_count, pk_count} ->
+        text = "#{left_len.(player.display_name)}: #{pvm_count}"
+
+        if pk_count > 0 do
+          "#{text} (+ #{pk_count})"
+        else
+          text
+        end
+      end)
       |> Enum.join("\n")
 
-    "**Deaths**\n```\n#{list_content}\n```"
+    "**Deaths:** PvM (+ PK)\n```\n#{list_content}\n```"
   end
 
   defp padding_fn(list) do
