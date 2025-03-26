@@ -157,7 +157,7 @@ defmodule DiscordBot.Commands do
 
       boss_totals =
         grouped_players
-        |> Enum.reject(fn {_, _, group} -> group === :unspecified end)
+        |> Enum.reject(fn {_, _, group} -> is_nil(group) end)
         |> Enum.map(fn {count, _, group} -> "[#{group}]: #{count}" end)
 
       group_boss_header =
