@@ -15,6 +15,14 @@ defmodule DiscordBot.Consumer do
     DiscordBot.MessageHandler.handle_message(message)
   end
 
+  def handle_event({:MESSAGE_DELETE, message, _ws_state}) do
+    DiscordBot.MessageHandler.handle_delete_message(message)
+  end
+
+  def handle_event({:MESSAGE_DELETE_BULK, message, _ws_state}) do
+    DiscordBot.MessageHandler.handle_delete_message(message)
+  end
+
   def handle_event({:INTERACTION_CREATE, interaction, _ws_state}) do
     response = DiscordBot.Commands.handle_interaction(interaction)
     Api.create_interaction_response(interaction, response)

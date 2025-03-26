@@ -1,6 +1,7 @@
 defmodule DiscordBot.Deaths do
   require Logger
-  require Ecto.Query
+  import Ecto.Query
+  alias Nostrum.Snowflake
   alias DiscordBot.Repo
   alias DiscordBot.Players
 
@@ -10,14 +11,14 @@ defmodule DiscordBot.Deaths do
         %Nostrum.Struct.Message{embeds: embeds} = message,
         update_in_place \\ false
       ) do
-    death_qry = Ecto.Query.from(d in Players.Death, where: d.message_id == ^message.id)
+    death_qry = from(d in Players.Death, where: d.message_id == ^message.id)
 
     if Repo.exists?(death_qry) do
       if update_in_place do
         death_embeds = only_death_embeds(embeds)
 
         death_qry
-        |> Ecto.Query.preload([:player])
+        |> preload([:player])
         |> Repo.all()
         |> Enum.flat_map(fn death ->
           death_embeds |> Enum.map(&parse_death_embed(death, message, &1))
@@ -61,6 +62,12 @@ defmodule DiscordBot.Deaths do
       message_id: id,
       is_pk: String.contains?(description, "has just been PKed")
     })
+  end
+
+  @spec remove_deaths([Snowflake.t()]) :: :ok
+  def remove_deaths(msg_ids) do
+    from(d in Players.Death, where: d.message_id in ^msg_ids)
+    |> Repo.delete_all()
   end
 
   @spec fetch_all_deaths(Nostrum.Struct.Channel.id()) ::
