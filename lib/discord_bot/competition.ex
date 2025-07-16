@@ -9,19 +9,35 @@ defmodule DiscordBot.Competition do
 
   defstruct in_progress: false, refresh_ref: nil
 
-  defp get_refresh_time() do
+  defp get_end_of_week_time() do
     now = DateTime.utc_now()
-    timestamp = Time.new!(23, 0, 0)
+    timestamp = ~T[23:00:00]
     # end time sunday of the current week
     end_time = DateTime.new!(Date.end_of_week(now), timestamp)
 
     if DateTime.after?(now, end_time) do
       # In case it's not new week yet
-      DateTime.new!(Date.end_of_week(DateTime.add(now, 1, :hour)), timestamp)
+      DateTime.add(end_time, 7, :day)
     else
       end_time
     end
   end
+
+  defp get_end_of_day_time() do
+    now = DateTime.utc_now()
+    timestamp = ~T[23:00:00]
+    # end time sunday of the current week
+    end_time = DateTime.new!(DateTime.to_date(now), timestamp)
+
+    if DateTime.after?(now, end_time) do
+      # In case it's not new day yet
+      DateTime.add(end_time, 1, :day)
+    else
+      end_time
+    end
+  end
+
+  defp get_refresh_time(), do: get_end_of_day_time()
 
   defp calculate_pre_end_time(end_time) do
     DateTime.diff(end_time, DateTime.utc_now(), :millisecond)
