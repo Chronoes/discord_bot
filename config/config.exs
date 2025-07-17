@@ -3,7 +3,9 @@
 import Config
 
 config :discord_bot,
-  ecto_repos: [DiscordBot.Repo]
+  ecto_repos: [DiscordBot.Repo],
+  # Discord user ID of the bot owner, used for DMs and other personal messages
+  my_id: nil
 
 config :nostrum,
   token: "",

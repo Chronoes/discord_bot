@@ -7,7 +7,9 @@ defmodule DiscordBot.Competition do
 
   @type comp_id :: binary() | integer()
 
-  defstruct in_progress: false, refresh_ref: nil
+  defstruct in_progress: false,
+            refresh_ref: nil,
+            name_changed_players: []
 
   defp get_end_of_week_time() do
     now = DateTime.utc_now()
@@ -144,8 +146,19 @@ defmodule DiscordBot.Competition do
   end
 
   @impl true
+  def handle_cast({:add_name_change, player}, state) do
+    {:noreply, %{state | name_changed_players: [player | state.name_changed_players]}}
+  end
+
+  @impl true
   def handle_cast({:end_comp_update, _comp_id}, state) do
-    {:noreply, %{state | in_progress: false}}
+    if not Enum.empty?(state.name_changed_players) do
+      DiscordBot.Messenger.send_to_me(
+        "Following players had name changes: #{Enum.join(state.name_changed_players, ", ")}"
+      )
+    end
+
+    {:noreply, %{state | in_progress: false, name_changed_players: []}}
   end
 
   @impl true
@@ -170,10 +183,21 @@ defmodule DiscordBot.Competition do
       )
 
       Enum.each(players, fn player ->
-        try do
-          TempleOsrs.add_player_datapoint(player)
-        rescue
-          _ -> Logger.error("Failed to update datapoint for player #{player}")
+        case TempleOsrs.add_player_datapoint(player) do
+          {:ok, _} ->
+            player
+
+          {:error, e} ->
+            case e do
+              %Mint.HTTPError{reason: {:invalid_request_target, "/new_name" <> _}} ->
+                GenServer.cast(__MODULE__, {:add_name_change, player})
+                Logger.error("Failed to update datapoint for #{player}: Name changed")
+
+              _ ->
+                Logger.error(
+                  "Unexpected error while updating datapoint for #{player}: #{inspect(e)}"
+                )
+            end
         end
 
         Process.sleep(interval)

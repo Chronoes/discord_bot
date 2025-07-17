@@ -18,9 +18,9 @@ defmodule DiscordBot.TempleOsrs do
     )
   end
 
-  @spec add_player_datapoint(binary()) :: Req.Response.t()
+  @spec add_player_datapoint(binary()) :: {:ok, Req.Response.t()} | {:error, Exception.t()}
   def add_player_datapoint(player_id) do
-    Req.get!("#{@api_url}/php/add_datapoint.php?player=#{URI.encode(player_id)}",
+    Req.get("#{@api_url}/php/add_datapoint.php?player=#{URI.encode(player_id)}",
       headers: @headers
     )
   end
