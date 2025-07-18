@@ -10,6 +10,7 @@ RUN mix deps.compile
 COPY config ./config
 COPY lib ./lib
 COPY test ./test
+COPY priv ./priv
 
 RUN mix release
 

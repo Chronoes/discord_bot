@@ -10,7 +10,7 @@ defmodule DiscordBot do
           DiscordBot.Repo,
           DiscordBot.Consumer,
           DiscordBot.Bosses,
-          DiscordBot.Competition
+          DiscordBot.CompetitionManager
         ],
         DiscordBot.Countdown.tasks()
       ])

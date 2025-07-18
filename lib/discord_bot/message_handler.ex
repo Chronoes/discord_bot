@@ -32,12 +32,12 @@ defmodule DiscordBot.MessageHandler do
   end
 
   defp handle_competition_message(%Message{id: msg_id, channel_id: channel_id} = message) do
-    case DiscordBot.Competition.check_message(message) do
+    case DiscordBot.CompetitionManager.check_message(message) do
       :noop ->
         :noop
 
       {:ok, comp_id} ->
-        DiscordBot.Competition.update_player_datapoints(comp_id)
+        DiscordBot.CompetitionManager.update_player_datapoints(comp_id)
         Nostrum.Api.Message.react(channel_id, msg_id, "✅")
     end
   end
