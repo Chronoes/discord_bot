@@ -36,6 +36,7 @@ defmodule DiscordBot.Competition do
     Repo.all(CompetitionPlayer)
   end
 
+  @spec notify_players([CompetitionPlayer.t()]) :: :ok
   def notify_players(players) do
     players
     |> Enum.each(fn player ->
