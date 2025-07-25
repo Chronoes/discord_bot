@@ -1,0 +1,2 @@
+#!/bin/bash
+dexec iex --cookie monster --remsh discord_bot

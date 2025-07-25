@@ -1,0 +1,12 @@
+services:
+  discord_bot:
+    image: osrs-discord-bot:dev-latest
+    build:
+      context: .
+      target: dev
+      args:
+        MIX_ENV: dev
+        ELIXIR_VERSION: 1.18.4
+    restart: no
+    volumes:
+      - './:/opt/app'
