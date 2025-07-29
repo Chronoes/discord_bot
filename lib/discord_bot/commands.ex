@@ -40,7 +40,14 @@ defmodule DiscordBot.Commands do
       command = %{
         name: "oof",
         description: "list deaths recorded in channel",
-        options: []
+        options: [
+          %{
+            name: "date",
+            description: "Date to compare with (YYYY-MM-DD)",
+            type: ApplicationCommandOptionType.string(),
+            required: false
+          }
+        ]
       }
 
       Nostrum.Api.ApplicationCommand.create_guild_command(guild.guild_id, command)
@@ -71,8 +78,7 @@ defmodule DiscordBot.Commands do
     }
   end
 
-  def handle_interaction(%Interaction{data: %{name: "kc"}} = interaction) do
-    %Interaction{data: %{options: options}} = interaction
+  def handle_interaction(%Interaction{data: %{name: "kc", options: options}} = _interaction) do
     %{value: value} = Enum.find(options, fn opt -> opt.name === "name" end)
 
     boss =
@@ -102,21 +108,54 @@ defmodule DiscordBot.Commands do
       }
   end
 
-  def handle_interaction(%Interaction{data: %{name: "oof"}} = _interaction) do
-    players = Players.get_death_count_by_player()
+  def handle_interaction(%Interaction{data: %{name: "oof", options: options}} = _interaction) do
+    case Enum.find(options || [], fn opt -> opt.name === "date" end) do
+      nil ->
+        oof_command_handler()
 
-    content = get_death_message_content(players)
+      %{value: value} ->
+        case Date.from_iso8601(value) do
+          {:ok, date} ->
+            oof_command_handler(date)
 
-    %{
-      type: @message,
-      data: %{
-        content: content
-      }
-    }
+          {:error, _} ->
+            msg = oof_command_handler()
+            %{data: %{content: content}} = msg
+            %{msg | data: %{content: "**Invalid date format. Use YYYY-MM-DD.**\n\n#{content}"}}
+        end
+    end
   end
 
   def handle_interaction(_) do
     %{type: @message, data: %{content: "N/A"}}
+  end
+
+  # Handles the /oof command to get total death counts
+  defp oof_command_handler() do
+    players = Players.get_death_count_by_player()
+
+    list_content = get_players_deaths_list(players)
+
+    %{
+      type: @message,
+      data: %{
+        content: "**Deaths:** PvM (PK)\n```\n#{list_content}\n```"
+      }
+    }
+  end
+
+  defp oof_command_handler(date) do
+    players_at_date = Players.get_death_count_by_player(date)
+    players = Players.get_death_count_by_player()
+
+    list_content = get_players_deaths_list(players, players_at_date)
+
+    %{
+      type: @message,
+      data: %{
+        content: "**Deaths since #{Date.to_string(date)}:** PvM (PK)\n```\n#{list_content}\n```"
+      }
+    }
   end
 
   defp get_boss_message_content(boss) do
@@ -173,24 +212,55 @@ defmodule DiscordBot.Commands do
     end
   end
 
-  defp get_death_message_content(players) do
-    left_len = padding_fn(players |> Enum.map(fn {player, _, _} -> player.display_name end))
+  defp left_len_fn_of_players(players) do
+    padding_fn(players |> Enum.map(fn {player, _} -> player.display_name end))
+  end
 
-    list_content =
-      players
-      |> Enum.sort_by(&elem(&1, 1), :desc)
-      |> Enum.map(fn {player, pvm_count, pk_count} ->
-        text = "#{left_len.(player.display_name)}: #{pvm_count}"
+  defp get_players_deaths_list(players) do
+    left_len = left_len_fn_of_players(players)
 
-        if pk_count > 0 do
-          "#{text} (+ #{pk_count})"
+    players
+    |> Enum.sort_by(&elem(&1, 1), :desc)
+    |> Enum.map(fn {player, {pvm_count, pk_count}} ->
+      text = "#{left_len.(player.display_name)}: #{pvm_count}"
+
+      if pk_count > 0 do
+        "#{text} (#{pk_count})"
+      else
+        text
+      end
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp get_players_deaths_list(players, players_prev) do
+    left_len = left_len_fn_of_players(players)
+
+    players
+    |> Enum.sort_by(&elem(&1, 1), :desc)
+    |> Enum.map(fn {player, {pvm_count, pk_count} = counts} ->
+      case Enum.find(players_prev, fn {p, _} -> p.id == player.id end) do
+        nil ->
+          {player, counts, {0, 0}}
+
+        {p, {prev_pvm_count, prev_pk_count}} ->
+          {p, counts, {pvm_count - prev_pvm_count, pk_count - prev_pk_count}}
+      end
+    end)
+    |> Enum.map(fn {player, {pvm_count, pk_count}, {diff_pvm, diff_pk}} ->
+      text = "#{left_len.(player.display_name)}: +#{diff_pvm} [#{pvm_count}]"
+
+      if pk_count > 0 do
+        if diff_pk > 0 do
+          "#{text} (+#{diff_pk} [#{pk_count}])"
         else
-          text
+          "#{text} (#{pk_count})"
         end
-      end)
-      |> Enum.join("\n")
-
-    "**Deaths:** PvM (+ PK)\n```\n#{list_content}\n```"
+      else
+        text
+      end
+    end)
+    |> Enum.join("\n")
   end
 
   defp padding_fn(list) do

@@ -35,14 +35,22 @@ defmodule DiscordBot.Players do
     String.downcase(name) |> String.replace(" ", "_")
   end
 
-  @spec get_death_count_by_player() :: [{%Player{}, integer, integer}]
-  def get_death_count_by_player() do
-    Ecto.Query.from(d in Death,
-      preload: :player,
-      select: {d, count(d.id), fragment("SUM(CASE WHEN ? THEN 1 ELSE 0 END)", d.is_pk)},
-      group_by: d.player_id
-    )
+  @spec get_death_count_by_player() :: [{%Player{}, {integer, integer}}]
+  @spec get_death_count_by_player(Date.t() | nil) :: [{%Player{}, {integer, integer}}]
+  def get_death_count_by_player(date \\ nil) do
+    qry =
+      Ecto.Query.from(d in Death,
+        preload: :player,
+        select: {d, count(d.id), fragment("SUM(CASE WHEN ? THEN 1 ELSE 0 END)", d.is_pk)},
+        group_by: d.player_id
+      )
+
+    if date do
+      Ecto.Query.where(qry, [d], d.timestamp <= ^DateTime.new!(date, ~T[00:00:00]))
+    else
+      qry
+    end
     |> Repo.all()
-    |> Enum.map(fn {death, count, pk_count} -> {death.player, count - pk_count, pk_count} end)
+    |> Enum.map(fn {death, count, pk_count} -> {death.player, {count - pk_count, pk_count}} end)
   end
 end
