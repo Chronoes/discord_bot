@@ -139,7 +139,7 @@ defmodule DiscordBot.Commands do
     %{
       type: @message,
       data: %{
-        content: "**Deaths:** PvM (PK)\n```\n#{list_content}\n```"
+        content: "**Deaths:** PvM [PK]\n```\n#{list_content}\n```"
       }
     }
   end
@@ -153,7 +153,7 @@ defmodule DiscordBot.Commands do
     %{
       type: @message,
       data: %{
-        content: "**Deaths since #{Date.to_string(date)}:** PvM (PK)\n```\n#{list_content}\n```"
+        content: "**Deaths since #{Date.to_string(date)}:** PvM [PK]\n```\n#{list_content}\n```"
       }
     }
   end
@@ -185,7 +185,7 @@ defmodule DiscordBot.Commands do
         end)
         |> Enum.sort_by(&elem(&1, 1), :desc)
 
-      left_len = padding_fn(player_totals |> Enum.map(&elem(&1, 0)))
+      left_len = DiscordBot.StringUtil.left_padding_fn(player_totals |> Enum.map(&elem(&1, 0)))
 
       content =
         player_totals
@@ -213,7 +213,10 @@ defmodule DiscordBot.Commands do
   end
 
   defp left_len_fn_of_players(players) do
-    padding_fn(players |> Enum.map(fn {player, _} -> player.display_name end))
+    DiscordBot.StringUtil.left_padding_fn(
+      players
+      |> Enum.map(fn {player, _} -> player.display_name end)
+    )
   end
 
   defp get_players_deaths_list(players) do
@@ -222,10 +225,10 @@ defmodule DiscordBot.Commands do
     players
     |> Enum.sort_by(&elem(&1, 1), :desc)
     |> Enum.map(fn {player, {pvm_count, pk_count}} ->
-      text = "#{left_len.(player.display_name)}: #{pvm_count}"
+      text = "#{left_len.(player.display_name)}: #{String.pad_trailing(to_string(pvm_count), 4)}"
 
       if pk_count > 0 do
-        "#{text} (#{pk_count})"
+        "#{text} [#{pk_count}]"
       else
         text
       end
@@ -237,7 +240,6 @@ defmodule DiscordBot.Commands do
     left_len = left_len_fn_of_players(players)
 
     players
-    |> Enum.sort_by(&elem(&1, 1), :desc)
     |> Enum.map(fn {player, {pvm_count, pk_count} = counts} ->
       case Enum.find(players_prev, fn {p, _} -> p.id == player.id end) do
         nil ->
@@ -247,25 +249,21 @@ defmodule DiscordBot.Commands do
           {p, counts, {pvm_count - prev_pvm_count, pk_count - prev_pk_count}}
       end
     end)
+    |> Enum.sort_by(fn {_, _, {diff_pvm, _}} -> diff_pvm end, :desc)
     |> Enum.map(fn {player, {pvm_count, pk_count}, {diff_pvm, diff_pk}} ->
-      text = "#{left_len.(player.display_name)}: +#{diff_pvm} [#{pvm_count}]"
+      text =
+        "#{left_len.(player.display_name)}: +#{String.pad_trailing(to_string(diff_pvm), 3)} #{String.pad_trailing("(#{pvm_count})", 6)}"
 
       if pk_count > 0 do
         if diff_pk > 0 do
-          "#{text} (+#{diff_pk} [#{pk_count}])"
+          "#{text} [+#{String.pad_trailing(to_string(diff_pk), 3)} (#{pk_count})]"
         else
-          "#{text} (#{pk_count})"
+          "#{text} [#{pk_count}]"
         end
       else
         text
       end
     end)
     |> Enum.join("\n")
-  end
-
-  defp padding_fn(list) do
-    left_len = list |> Enum.map(fn name -> String.length(name) end) |> Enum.max()
-
-    fn name -> String.pad_leading(name, left_len) end
   end
 end
