@@ -163,7 +163,8 @@ defmodule DiscordBot.Commands do
       Players.get_all_players()
       |> Enum.group_by(& &1.group, & &1.display_name)
       |> Enum.map(fn {group, players} ->
-        Tuple.insert_at(DiscordBot.Bosses.get_group_boss(players, boss), 2, group)
+        {total_count, player_counts} = DiscordBot.Bosses.get_group_boss(players, boss)
+        {total_count, player_counts, group}
       end)
 
     total = Enum.map(grouped_players, &elem(&1, 0)) |> Enum.sum()
@@ -172,18 +173,31 @@ defmodule DiscordBot.Commands do
     if total > 0 do
       player_totals =
         grouped_players
-        |> Enum.flat_map(fn {_, player_counts, group} ->
+        |> Enum.flat_map(fn {_total_count, player_counts, group} ->
           player_counts
-          |> Enum.filter(fn {_, count} -> count > 0 end)
-          |> Enum.map(fn {player, count} ->
-            if is_nil(group) do
-              {player, count}
-            else
-              {"[#{group}] #{player}", count}
-            end
+          |> Enum.filter(fn
+            {:ok, _player, count} -> count > 0
+            {:error, _player, _msg} -> true
+          end)
+          |> Enum.map(fn
+            {:ok, player, count} ->
+              if is_nil(group) do
+                {player, count}
+              else
+                {"[#{group}] #{player}", count}
+              end
+
+            {:error, player, msg} ->
+              {player, msg}
           end)
         end)
-        |> Enum.sort_by(&elem(&1, 1), :desc)
+        |> Enum.sort_by(
+          fn
+            {_player, sortable} when is_integer(sortable) -> sortable
+            _ -> 0
+          end,
+          :desc
+        )
 
       left_len = DiscordBot.StringUtil.left_padding_fn(player_totals |> Enum.map(&elem(&1, 0)))
 

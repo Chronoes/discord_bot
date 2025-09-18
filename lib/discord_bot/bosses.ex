@@ -146,12 +146,16 @@ defmodule DiscordBot.Bosses do
   def handle_call({:fetch_player_bosses, player}, _from, table) do
     res = TempleOsrs.fetch_player_stats(player)
 
-    results = Map.take(res.body["data"], Map.keys(@bosses))
-    :ets.insert(table, {player, results, System.monotonic_time(:second)})
-    {:reply, results, table}
+    if is_nil(res.body["data"]) do
+      {:reply, {:error, "Unknown player"}, table}
+    else
+      results = Map.take(res.body["data"], Map.keys(@bosses))
+      :ets.insert(table, {player, results, System.monotonic_time(:second)})
+      {:reply, {:ok, results}, table}
+    end
   end
 
-  @spec fetch_player_bosses(player()) :: boss_map()
+  @spec fetch_player_bosses(player()) :: {:ok, boss_map()} | {:error, String.t()}
   def fetch_player_bosses(player) do
     GenServer.call(__MODULE__, {:fetch_player_bosses, player})
   end
@@ -193,7 +197,7 @@ defmodule DiscordBot.Bosses do
     end
   end
 
-  @spec get_player_bosses(player()) :: boss_map()
+  @spec get_player_bosses(player()) :: {:ok, boss_map()} | {:error, String.t()}
   def get_player_bosses(player) do
     case lookup(player) do
       [] ->
@@ -206,29 +210,37 @@ defmodule DiscordBot.Bosses do
           Logger.debug("Fetching updated boss data for #{player}")
           fetch_player_bosses(player)
         else
-          results
+          {:ok, results}
         end
     end
   end
 
-  @spec get_group_bosses([player()]) :: {boss_map(), [{player(), boss_map()}]}
+  @spec get_group_bosses([player()]) ::
+          {boss_map(), [{:ok, player(), boss_map()} | {:error, player(), String.t()}]}
   def get_group_bosses(players) do
     Enum.reduce(
       players,
       {@bosses, []},
       fn player, {totals, all_players} ->
-        player_bosses = get_player_bosses(player)
+        case get_player_bosses(player) do
+          {:ok, player_bosses} ->
+            {
+              Map.merge(totals, player_bosses, fn _key, total_c, player_c ->
+                total_c + player_c
+              end),
+              [{:ok, player, player_bosses} | all_players]
+            }
 
-        {
-          Map.merge(totals, player_bosses, fn _key, total_c, player_c -> total_c + player_c end),
-          [{player, player_bosses} | all_players]
-        }
+          {:error, msg} ->
+            {totals, [{:error, player, msg} | all_players]}
+        end
       end
     )
   end
 
   @spec get_group_boss([player()], boss()) ::
-          {non_neg_integer(), [{player(), non_neg_integer()}]}
+          {non_neg_integer(),
+           [{:ok, player(), non_neg_integer()} | {:error, player(), String.t()}]}
   def get_group_boss(players, boss) do
     if is_nil(@bosses[boss]) do
       raise NoBossError
@@ -238,13 +250,14 @@ defmodule DiscordBot.Bosses do
       players,
       {0, []},
       fn player, {total_c, all_players} ->
-        player_bosses = get_player_bosses(player)
-        boss_count = player_bosses[boss]
+        case get_player_bosses(player) do
+          {:ok, player_bosses} ->
+            boss_count = player_bosses[boss]
+            {total_c + boss_count, [{:ok, player, boss_count} | all_players]}
 
-        {
-          total_c + boss_count,
-          [{player, boss_count} | all_players]
-        }
+          {:error, msg} ->
+            {total_c, [{:error, player, msg} | all_players]}
+        end
       end
     )
   end
