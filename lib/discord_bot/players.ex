@@ -30,6 +30,13 @@ defmodule DiscordBot.Players do
     |> Repo.insert!()
   end
 
+  @spec update_player_name(%Player{}, String.t()) :: %Player{}
+  def update_player_name(%Player{} = player, new_name) do
+    player
+    |> Player.changeset(%{name: normalize_name(new_name), display_name: new_name})
+    |> Repo.update!()
+  end
+
   @spec normalize_name(String.t()) :: String.t()
   def normalize_name(name) do
     String.downcase(name) |> String.replace(" ", "_")

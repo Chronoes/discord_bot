@@ -14,6 +14,7 @@ defmodule DiscordBot.Bosses do
     "Clue_hard" => 0,
     "Clue_elite" => 0,
     "Clue_master" => 0,
+    "Doom of Mokhaiotl" => 0,
     "LMS" => 0,
     "Abyssal Sire" => 0,
     "Alchemical Hydra" => 0,
@@ -25,6 +26,7 @@ defmodule DiscordBot.Bosses do
     "Chambers of Xeric Challenge Mode" => 0,
     "Chaos Elemental" => 0,
     "Chaos Fanatic" => 0,
+    "Colosseum Glory" => 0,
     "Commander Zilyana" => 0,
     "Corporeal Beast" => 0,
     "Crazy Archaeologist" => 0,
@@ -80,8 +82,10 @@ defmodule DiscordBot.Bosses do
     "Spindel" => 0,
     "Duke Sucellus" => 0,
     "The Leviathan" => 0,
+    "The Royal Titans" => 0,
     "The Whisperer" => 0,
-    "Vardorvis" => 0
+    "Vardorvis" => 0,
+    "Yama" => 0
   }
   @boss_renames %{
     "Clue_all" => "Clue (all)",
@@ -114,7 +118,8 @@ defmodule DiscordBot.Bosses do
     "toa" => "Tombs of Amascut",
     "huey" => "Hueycoatl",
     "amox" => "Amoxliatl",
-    "colosseum" => "Sol Heredit"
+    "colosseum" => "Sol Heredit",
+    "delve" => "Doom of Mokhaiotl"
   }
 
   @boss_grouping [
