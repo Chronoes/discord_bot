@@ -152,11 +152,15 @@ defmodule DiscordBot.CompetitionManager do
         :noop
 
       players ->
-        DiscordBot.Messenger.send_to_me(
-          "Following players had name changes: #{players |> Enum.map(& &1.name) |> Enum.join(", ")}"
-        )
+        unnotified = Enum.reject(players, & &1.notified)
 
-        Competition.notify_players(Enum.reject(players, & &1.notified))
+        if not Enum.empty?(unnotified) do
+          DiscordBot.Messenger.send_to_me(
+            "Following players had name changes: #{players |> Enum.map(& &1.name) |> Enum.join(", ")}"
+          )
+
+          Competition.notify_players(unnotified)
+        end
     end
 
     Competition.delete_players_if_resolved(comp_uuid)
