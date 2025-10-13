@@ -7,6 +7,8 @@ config :discord_bot,
   # Discord user ID of the bot owner, used for DMs and other personal messages
   my_id: nil
 
+config :logger, :default_formatter, format: "$date $time [$level] $metadata$message\n"
+
 config :nostrum,
   token: "",
   gateway_intents: [
