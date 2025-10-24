@@ -38,7 +38,7 @@ defmodule DiscordBot.MessageHandler do
 
       {:ok, comp_id} ->
         DiscordBot.CompetitionManager.update_player_datapoints(comp_id)
-        Nostrum.Api.Message.react(channel_id, msg_id, "✅")
+        Nostrum.Api.Message.react(channel_id, msg_id, URI.encode("✅"))
     end
   end
 
@@ -49,7 +49,7 @@ defmodule DiscordBot.MessageHandler do
 
       :oof ->
         Logger.info("Death recorded #{msg_id}")
-        Nostrum.Api.Message.react(channel_id, msg_id, "💀")
+        Nostrum.Api.Message.react(channel_id, msg_id, URI.encode("💀"))
     end
   end
 
