@@ -257,7 +257,7 @@ defmodule DiscordBot.Commands do
     |> Enum.map(fn {player, {pvm_count, pk_count} = counts} ->
       case Enum.find(players_prev, fn {p, _} -> p.id == player.id end) do
         nil ->
-          {player, counts, {0, 0}}
+          {player, counts, {pvm_count, pk_count}}
 
         {p, {prev_pvm_count, prev_pk_count}} ->
           {p, counts, {pvm_count - prev_pvm_count, pk_count - prev_pk_count}}
