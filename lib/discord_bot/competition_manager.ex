@@ -11,29 +11,26 @@ defmodule DiscordBot.CompetitionManager do
   defstruct in_progress: false,
             refresh_ref: nil
 
-  defp get_end_of_week_time() do
+  defp get_end_of_day_time(end_of_week \\ false) do
     now = DateTime.utc_now()
     timestamp = ~T[23:00:00]
     # end time sunday of the current week
-    end_time = DateTime.new!(Date.end_of_week(now), timestamp)
+    reference_time =
+      if end_of_week do
+        Date.end_of_week(now)
+      else
+        DateTime.to_date(now)
+      end
+
+    end_time = DateTime.new!(reference_time, timestamp)
 
     if DateTime.after?(now, end_time) do
-      # In case it's not new week yet
-      DateTime.add(end_time, 7, :day)
-    else
-      end_time
-    end
-  end
-
-  defp get_end_of_day_time() do
-    now = DateTime.utc_now()
-    timestamp = ~T[23:00:00]
-    # end time sunday of the current week
-    end_time = DateTime.new!(DateTime.to_date(now), timestamp)
-
-    if DateTime.after?(now, end_time) do
-      # In case it's not new day yet
-      DateTime.add(end_time, 1, :day)
+      # In case it's not new period yet
+      if end_of_week do
+        DateTime.add(end_time, 7, :day)
+      else
+        DateTime.add(end_time, 1, :day)
+      end
     else
       end_time
     end

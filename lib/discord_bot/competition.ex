@@ -10,7 +10,7 @@ defmodule DiscordBot.Competition do
   end
 
   @spec add_player(String.t(), binary(), keyword()) ::
-          {:ok, CompetitionPlayer.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, %CompetitionPlayer{}} | {:error, Ecto.Changeset.t()}
   def add_player(player_name, competition_uuid, values) do
     name_changed = Keyword.get(values, :name_changed, false)
     other_issue = Keyword.get(values, :other_issue, false)
@@ -31,12 +31,12 @@ defmodule DiscordBot.Competition do
     |> Repo.insert_or_update()
   end
 
-  @spec get_players() :: [CompetitionPlayer.t()]
+  @spec get_players() :: [%CompetitionPlayer{}]
   def get_players() do
     Repo.all(CompetitionPlayer)
   end
 
-  @spec notify_players([CompetitionPlayer.t()]) :: :ok
+  @spec notify_players([%CompetitionPlayer{}]) :: :ok
   def notify_players(players) do
     players
     |> Enum.each(fn player ->

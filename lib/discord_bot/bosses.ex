@@ -7,6 +7,7 @@ defmodule DiscordBot.Bosses do
   @bosses %{
     "Amoxliatl" => 0,
     "Araxxor" => 0,
+    "Brutus" => 0,
     "Clue_all" => 0,
     "Clue_beginner" => 0,
     "Clue_easy" => 0,
@@ -50,6 +51,7 @@ defmodule DiscordBot.Bosses do
     "Sarachnis" => 0,
     "Scorpia" => 0,
     "Scurrius" => 0,
+    "Shellbane Gryphon" => 0,
     "Skotizo" => 0,
     "Sol Heredit" => 0,
     "The Gauntlet" => 0,
