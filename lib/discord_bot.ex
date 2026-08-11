@@ -12,7 +12,8 @@ defmodule DiscordBot do
           DiscordBot.Bosses,
           DiscordBot.CompetitionManager
         ],
-        DiscordBot.Countdown.tasks()
+        DiscordBot.Countdown.tasks(),
+        DiscordBot.PeriodicOof.tasks()
       ])
 
     # See https://hexdocs.pm/elixir/main/Supervisor.html

@@ -3,6 +3,7 @@ defmodule DiscordBot.Commands do
   alias Nostrum.Struct.Interaction
   alias DiscordBot.Guilds
   alias DiscordBot.Players
+  alias DiscordBot.Deaths
   alias DiscordBot.Errors.NoBossError
 
   # https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-interaction-callback-type
@@ -111,51 +112,26 @@ defmodule DiscordBot.Commands do
   def handle_interaction(%Interaction{data: %{name: "oof", options: options}} = _interaction) do
     case Enum.find(options || [], fn opt -> opt.name === "date" end) do
       nil ->
-        oof_command_handler()
+        %{type: @message, data: %{content: Deaths.report()}}
 
       %{value: value} ->
         case Date.from_iso8601(value) do
           {:ok, date} ->
-            oof_command_handler(date)
+            %{type: @message, data: %{content: Deaths.report(date)}}
 
           {:error, _} ->
-            msg = oof_command_handler()
-            %{data: %{content: content}} = msg
-            %{msg | data: %{content: "**Invalid date format. Use YYYY-MM-DD.**\n\n#{content}"}}
+            content = Deaths.report()
+
+            %{
+              type: @message,
+              data: %{content: "**Invalid date format. Use YYYY-MM-DD.**\n\n#{content}"}
+            }
         end
     end
   end
 
   def handle_interaction(_) do
     %{type: @message, data: %{content: "N/A"}}
-  end
-
-  # Handles the /oof command to get total death counts
-  defp oof_command_handler() do
-    players = Players.get_death_count_by_player()
-
-    list_content = get_players_deaths_list(players)
-
-    %{
-      type: @message,
-      data: %{
-        content: "**Deaths:** PvM [PK]\n```\n#{list_content}\n```"
-      }
-    }
-  end
-
-  defp oof_command_handler(date) do
-    players_at_date = Players.get_death_count_by_player(date)
-    players = Players.get_death_count_by_player()
-
-    list_content = get_players_deaths_list(players, players_at_date)
-
-    %{
-      type: @message,
-      data: %{
-        content: "**Deaths since #{Date.to_string(date)}:** PvM [PK]\n```\n#{list_content}\n```"
-      }
-    }
   end
 
   defp get_boss_message_content(boss) do
@@ -224,60 +200,5 @@ defmodule DiscordBot.Commands do
     else
       "**#{boss_name}: #{total}**"
     end
-  end
-
-  defp left_len_fn_of_players(players) do
-    DiscordBot.StringUtil.left_padding_fn(
-      players
-      |> Enum.map(fn {player, _} -> player.display_name end)
-    )
-  end
-
-  defp get_players_deaths_list(players) do
-    left_len = left_len_fn_of_players(players)
-
-    players
-    |> Enum.sort_by(&elem(&1, 1), :desc)
-    |> Enum.map(fn {player, {pvm_count, pk_count}} ->
-      text = "#{left_len.(player.display_name)}: #{String.pad_trailing(to_string(pvm_count), 4)}"
-
-      if pk_count > 0 do
-        "#{text} [#{pk_count}]"
-      else
-        text
-      end
-    end)
-    |> Enum.join("\n")
-  end
-
-  defp get_players_deaths_list(players, players_prev) do
-    left_len = left_len_fn_of_players(players)
-
-    players
-    |> Enum.map(fn {player, {pvm_count, pk_count} = counts} ->
-      case Enum.find(players_prev, fn {p, _} -> p.id == player.id end) do
-        nil ->
-          {player, counts, {pvm_count, pk_count}}
-
-        {p, {prev_pvm_count, prev_pk_count}} ->
-          {p, counts, {pvm_count - prev_pvm_count, pk_count - prev_pk_count}}
-      end
-    end)
-    |> Enum.sort_by(fn {_, _, {diff_pvm, _}} -> diff_pvm end, :desc)
-    |> Enum.map(fn {player, {pvm_count, pk_count}, {diff_pvm, diff_pk}} ->
-      text =
-        "#{left_len.(player.display_name)}: +#{String.pad_trailing(to_string(diff_pvm), 3)} #{String.pad_trailing("(#{pvm_count})", 6)}"
-
-      if pk_count > 0 do
-        if diff_pk > 0 do
-          "#{text} [+#{String.pad_trailing(to_string(diff_pk), 3)} (#{pk_count})]"
-        else
-          "#{text} [#{pk_count}]"
-        end
-      else
-        text
-      end
-    end)
-    |> Enum.join("\n")
   end
 end

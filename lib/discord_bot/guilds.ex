@@ -14,6 +14,11 @@ defmodule DiscordBot.Guilds do
     Repo.get_by(Guild, guild_id: guild_id)
   end
 
+  @spec get_guild_by_name(String.t()) :: %Guild{} | nil
+  def get_guild_by_name(name) do
+    Repo.get_by(Guild, name: name) |> Repo.preload(:channels)
+  end
+
   @spec get_guild_channel(NostrumChannel.id()) :: %Channel{} | nil
   def get_guild_channel(channel_id) do
     Channel

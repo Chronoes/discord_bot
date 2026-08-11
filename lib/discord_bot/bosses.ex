@@ -46,6 +46,8 @@ defmodule DiscordBot.Bosses do
     "KreeArra" => 0,
     "Kril Tsutsaroth" => 0,
     "Lunar Chests" => 0,
+    "Mad Angel" => 0,
+    "Maggot King" => 0,
     "Mimic" => 0,
     "Obor" => 0,
     "Sarachnis" => 0,

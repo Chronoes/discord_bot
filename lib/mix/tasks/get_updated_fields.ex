@@ -185,7 +185,9 @@ defmodule Mix.Tasks.GetUpdatedFields do
       "Shellbane Gryphon_ehb",
       "Sailing_level",
       "Sailing_rank",
-      "Brutus_ehb"
+      "Brutus_ehb",
+      "Mad Angel_ehb",
+      "Maggot King_ehb"
     ]
 
     templeosrs_data = DiscordBot.TempleOsrs.fetch_player_stats(random_player.name).body["data"]
