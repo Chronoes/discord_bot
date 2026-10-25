@@ -55,7 +55,11 @@ defmodule DiscordBot.Commands do
     end
   end
 
-  @spec handle_interaction(Interaction.t()) :: map()
+  @doc """
+  Returns either an immediate interaction response, or `{:deferred, build_data}` for slow commands.
+  For the latter, the caller should defer the response and edit it with `build_data.()` afterwards.
+  """
+  @spec handle_interaction(Interaction.t()) :: map() | {:deferred, (-> map())}
   def handle_interaction(%Interaction{type: 4, data: %{name: "kc"}} = interaction) do
     %Interaction{data: %{options: options}} = interaction
     %{value: value} = Enum.find(options, fn opt -> opt.name === "name" end)
@@ -88,17 +92,7 @@ defmodule DiscordBot.Commands do
         [boss | _bosses] -> boss
       end
 
-    content =
-      DiscordBot.Bosses.get_related_bosses(boss)
-      |> Enum.map(&get_boss_message_content/1)
-      |> Enum.join("\n")
-
-    %{
-      type: @message,
-      data: %{
-        content: content
-      }
-    }
+    {:deferred, fn -> %{content: get_kc_content(boss)} end}
   rescue
     e in NoBossError ->
       %{
@@ -134,9 +128,23 @@ defmodule DiscordBot.Commands do
     %{type: @message, data: %{content: "N/A"}}
   end
 
-  defp get_boss_message_content(boss) do
+  defp get_kc_content(boss) do
+    players = Players.get_all_players()
+
+    # Fetch all uncached players concurrently up front, so that groups and related bosses
+    # below are served from cache instead of fetching group by group
+    players
+    |> Enum.map(& &1.display_name)
+    |> DiscordBot.Bosses.get_players_bosses()
+
+    DiscordBot.Bosses.get_related_bosses(boss)
+    |> Enum.map(&get_boss_message_content(&1, players))
+    |> Enum.join("\n")
+  end
+
+  defp get_boss_message_content(boss, players) do
     grouped_players =
-      Players.get_all_players()
+      players
       |> Enum.group_by(& &1.group, & &1.display_name)
       |> Enum.map(fn {group, players} ->
         {total_count, player_counts} = DiscordBot.Bosses.get_group_boss(players, boss)

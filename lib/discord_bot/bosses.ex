@@ -137,41 +137,43 @@ defmodule DiscordBot.Bosses do
   @type boss_map :: %{boss() => non_neg_integer()}
   @type table_record :: {player(), boss_map(), non_neg_integer()}
 
+  @table :bosses
+  @cache_ttl 120
+  @fetch_concurrency 10
+  @fetch_timeout 30_000
+
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
+  # The GenServer only owns the ETS table; reads and writes happen in the caller's process
+  # so that slow TempleOSRS requests don't serialize behind each other.
   @impl true
   def init(_state) do
-    table = :ets.new(:bosses, [])
+    table = :ets.new(@table, [:named_table, :public, read_concurrency: true])
     {:ok, table}
-  end
-
-  @impl true
-  def handle_call({:lookup, player}, _from, table) do
-    {:reply, :ets.lookup(table, player), table}
-  end
-
-  def handle_call({:fetch_player_bosses, player}, _from, table) do
-    res = TempleOsrs.fetch_player_stats(player)
-
-    if is_nil(res.body["data"]) do
-      {:reply, {:error, "Unknown player"}, table}
-    else
-      results = Map.take(res.body["data"], Map.keys(@bosses))
-      :ets.insert(table, {player, results, System.monotonic_time(:second)})
-      {:reply, {:ok, results}, table}
-    end
   end
 
   @spec fetch_player_bosses(player()) :: {:ok, boss_map()} | {:error, String.t()}
   def fetch_player_bosses(player) do
-    GenServer.call(__MODULE__, {:fetch_player_bosses, player})
+    case TempleOsrs.fetch_player_stats(player) do
+      %{body: %{"data" => data}} when is_map(data) ->
+        results = Map.take(data, Map.keys(@bosses))
+        :ets.insert(@table, {player, results, System.monotonic_time(:second)})
+        {:ok, results}
+
+      _ ->
+        {:error, "Unknown player"}
+    end
+  rescue
+    e ->
+      Logger.warning("Failed to fetch boss data for #{player}: #{Exception.message(e)}")
+      {:error, "Failed to fetch"}
   end
 
   @spec lookup(player()) :: [table_record()]
   def lookup(player) do
-    GenServer.call(__MODULE__, {:lookup, player})
+    :ets.lookup(@table, player)
   end
 
   @spec boss_display_name(boss()) :: boss()
@@ -214,8 +216,8 @@ defmodule DiscordBot.Bosses do
         fetch_player_bosses(player)
 
       [{player, results, timestamp}] ->
-        # If data is older than 120s, fetch new
-        if timestamp < System.monotonic_time(:second) - 120 do
+        # If data is older than @cache_ttl, fetch new
+        if timestamp < System.monotonic_time(:second) - @cache_ttl do
           Logger.debug("Fetching updated boss data for #{player}")
           fetch_player_bosses(player)
         else
@@ -224,25 +226,42 @@ defmodule DiscordBot.Bosses do
     end
   end
 
+  @doc """
+  Gets boss data for all players, fetching uncached players concurrently.
+  Results are in the same order as `players`.
+  """
+  @spec get_players_bosses([player()]) ::
+          [{player(), {:ok, boss_map()} | {:error, String.t()}}]
+  def get_players_bosses(players) do
+    players
+    |> Task.async_stream(&get_player_bosses/1,
+      max_concurrency: @fetch_concurrency,
+      timeout: @fetch_timeout,
+      on_timeout: :kill_task
+    )
+    |> Enum.zip_with(players, fn
+      {:ok, result}, player -> {player, result}
+      {:exit, _reason}, player -> {player, {:error, "Timed out"}}
+    end)
+  end
+
   @spec get_group_bosses([player()]) ::
           {boss_map(), [{:ok, player(), boss_map()} | {:error, player(), String.t()}]}
   def get_group_bosses(players) do
     Enum.reduce(
-      players,
+      get_players_bosses(players),
       {@bosses, []},
-      fn player, {totals, all_players} ->
-        case get_player_bosses(player) do
-          {:ok, player_bosses} ->
-            {
-              Map.merge(totals, player_bosses, fn _key, total_c, player_c ->
-                total_c + player_c
-              end),
-              [{:ok, player, player_bosses} | all_players]
-            }
+      fn
+        {player, {:ok, player_bosses}}, {totals, all_players} ->
+          {
+            Map.merge(totals, player_bosses, fn _key, total_c, player_c ->
+              total_c + player_c
+            end),
+            [{:ok, player, player_bosses} | all_players]
+          }
 
-          {:error, msg} ->
-            {totals, [{:error, player, msg} | all_players]}
-        end
+        {player, {:error, msg}}, {totals, all_players} ->
+          {totals, [{:error, player, msg} | all_players]}
       end
     )
   end
@@ -256,17 +275,15 @@ defmodule DiscordBot.Bosses do
     end
 
     Enum.reduce(
-      players,
+      get_players_bosses(players),
       {0, []},
-      fn player, {total_c, all_players} ->
-        case get_player_bosses(player) do
-          {:ok, player_bosses} ->
-            boss_count = player_bosses[boss]
-            {total_c + boss_count, [{:ok, player, boss_count} | all_players]}
+      fn
+        {player, {:ok, player_bosses}}, {total_c, all_players} ->
+          boss_count = Map.get(player_bosses, boss, 0)
+          {total_c + boss_count, [{:ok, player, boss_count} | all_players]}
 
-          {:error, msg} ->
-            {total_c, [{:error, player, msg} | all_players]}
-        end
+        {player, {:error, msg}}, {total_c, all_players} ->
+          {total_c, [{:error, player, msg} | all_players]}
       end
     )
   end
