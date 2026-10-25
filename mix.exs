@@ -4,8 +4,8 @@ defmodule DiscordBot.MixProject do
   def project do
     [
       app: :discord_bot,
-      version: "0.5.0",
-      elixir: "~> 1.18",
+      version: "0.6.0",
+      elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]

@@ -6,7 +6,7 @@ services:
       target: prod
       args:
         MIX_ENV: prod
-        ELIXIR_VERSION: 1.18.4
+        ELIXIR_VERSION: 1.20.4
     restart: unless-stopped
     volumes:
       - '/opt/discord_bot:/opt/app/data'
