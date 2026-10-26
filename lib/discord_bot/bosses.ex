@@ -1,7 +1,6 @@
 defmodule DiscordBot.Bosses do
   use GenServer
   require Logger
-  alias DiscordBot.Errors.NoBossError
   alias DiscordBot.TempleOsrs
 
   @bosses %{
@@ -156,11 +155,24 @@ defmodule DiscordBot.Bosses do
 
   @spec fetch_player_bosses(player()) :: {:ok, boss_map()} | {:error, String.t()}
   def fetch_player_bosses(player) do
-    case TempleOsrs.fetch_player_stats(player) do
+    with {:ok, results} <- fetch_bosses(player, nil) do
+      :ets.insert(@table, {player, results, System.monotonic_time(:second)})
+      {:ok, results}
+    end
+  end
+
+  @doc """
+  Fetches historical boss data for `player` at `date`. Not cached.
+  """
+  @spec fetch_player_bosses_at(player(), DateTime.t()) :: {:ok, boss_map()} | {:error, String.t()}
+  def fetch_player_bosses_at(player, date) do
+    fetch_bosses(player, date)
+  end
+
+  defp fetch_bosses(player, date) do
+    case TempleOsrs.fetch_player_stats(player, date) do
       %{body: %{"data" => data}} when is_map(data) ->
-        results = Map.take(data, Map.keys(@bosses))
-        :ets.insert(@table, {player, results, System.monotonic_time(:second)})
-        {:ok, results}
+        {:ok, Map.take(data, Map.keys(@bosses))}
 
       _ ->
         {:error, "Unknown player"}
@@ -262,28 +274,6 @@ defmodule DiscordBot.Bosses do
 
         {player, {:error, msg}}, {totals, all_players} ->
           {totals, [{:error, player, msg} | all_players]}
-      end
-    )
-  end
-
-  @spec get_group_boss([player()], boss()) ::
-          {non_neg_integer(),
-           [{:ok, player(), non_neg_integer()} | {:error, player(), String.t()}]}
-  def get_group_boss(players, boss) do
-    if is_nil(@bosses[boss]) do
-      raise NoBossError
-    end
-
-    Enum.reduce(
-      get_players_bosses(players),
-      {0, []},
-      fn
-        {player, {:ok, player_bosses}}, {total_c, all_players} ->
-          boss_count = Map.get(player_bosses, boss, 0)
-          {total_c + boss_count, [{:ok, player, boss_count} | all_players]}
-
-        {player, {:error, msg}}, {total_c, all_players} ->
-          {total_c, [{:error, player, msg} | all_players]}
       end
     )
   end

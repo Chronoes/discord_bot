@@ -4,7 +4,7 @@ DiscordBot is an OSRS-focused Discord bot that tracks player activity and provid
 
 ## What it can do
 
-- `/kc <boss>`: show group and player kill counts for a boss using TempleOSRS data.
+- `/kc <boss>`: show group and player kill counts for a boss using TempleOSRS data. Former group members have their KC frozen into the group total.
 - `/oof [date]`: show death totals (PvM and PK), optionally since a specific date.
 - Watch configured channels for RuneLite Dink plugin's `Player Death` embeds and store deaths automatically.
 - Detect TempleOSRS competition links, trigger member daily datapoint refreshes, and flag users who no longer exist or name has changed.
@@ -50,4 +50,23 @@ Stop the bot before migrating because SQLite files should not be migrated while 
 
 ```bash
 bot-run mix ecto.migrate
+```
+
+## Manage players
+
+Players and groups are managed from a remote shell into the running bot (`priv/diex` in dev, `docker compose exec discord_bot discord_bot remote` in prod).
+
+```elixir
+alias DiscordBot.Players
+
+# Add a player to a group (creates the player if needed)
+Players.add_to_group("Gim Jongmunn", "ainid")
+
+# Remove a player from a group. By default their KC is frozen into the group's total,
+# and further KC is shown separately. `date:` freezes KC as it was at that date.
+Players.remove_from_group("Caspyyyy", date: ~D[2025-09-01])
+Players.remove_from_group("Caspyyyy", freeze: false)
+
+# Fetch game modes (IM, UIM, HCIM) shown in /kc. Not updated automatically.
+Players.refresh_game_modes()
 ```

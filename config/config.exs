@@ -18,7 +18,9 @@ config :nostrum,
   ],
   ffmpeg: nil
 
-config :discord_bot, DiscordBot.Repo, database: "discord_bot.sqlite", wal_auto_check_point: 20
+config :discord_bot, DiscordBot.Repo,
+  database: System.get_env("DATABASE_PATH", "discord_bot.sqlite"),
+  wal_auto_check_point: 20
 
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this

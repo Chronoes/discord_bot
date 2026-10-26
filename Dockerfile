@@ -26,9 +26,11 @@ WORKDIR /opt/app
 ENTRYPOINT [ "priv/dev_launch.sh" ]
 
 FROM build AS release-build
+# Release build, can be used for DB migartions
 
 # Erlang flags for container building
 ENV MIX_ENV=prod ERL_AFLAGS="+JMsingle true"
+ENV DATABASE_PATH="data/discord_bot.sqlite"
 
 COPY config ./config
 COPY lib ./lib
@@ -40,9 +42,9 @@ RUN mix release
 FROM elixir:${ELIXIR_VERSION}-alpine AS prod
 
 ENV MIX_ENV=prod
+ENV DATABASE_PATH="data/discord_bot.sqlite"
 RUN mkdir --parents /opt/app/data
 WORKDIR /opt/app
 COPY --from=release-build /opt/app/_build .
 ENV PATH="/opt/app/prod/rel/discord_bot/bin:${PATH}"
-WORKDIR /opt/app/data
 CMD ["discord_bot", "start"]

@@ -6,7 +6,7 @@ services:
       target: dev
       args:
         MIX_ENV: dev
-        ELIXIR_VERSION: 1.18.4
+        ELIXIR_VERSION: 1.20.4
     restart: no
     volumes:
       - './:/opt/app'
